@@ -467,9 +467,17 @@ class Database {
   async _recalculateStats() {
     const store = this._getStore();
 
-    // Получаем индекс
-    const indexData = await store.get('vehicles:index');
-    const allPlates = indexData ? JSON.parse(indexData) : [];
+    // ВАЖНО: Используем свежий indexCache вместо чтения из Blobs
+    // indexCache обновляется в _updateIndex() перед вызовом этого метода
+    let allPlates;
+    if (this.indexCache) {
+      // Используем свежий кэш из памяти
+      allPlates = this.indexCache;
+    } else {
+      // Fallback на Blobs (на случай если кэш не инициализирован)
+      const indexData = await store.get('vehicles:index');
+      allPlates = indexData ? JSON.parse(indexData) : [];
+    }
 
     // Загружаем все автомобили
     const allVehicles = [];
