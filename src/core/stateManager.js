@@ -10,10 +10,9 @@ class StateManager {
 
   /**
    * Получить store для работы с Blobs
-   * Используем strong consistency для состояний, чтобы избежать race conditions
    */
   _getStore() {
-    return this.getStore({ name: this.storeName, consistency: 'strong' });
+    return this.getStore({ name: this.storeName, consistency: 'eventual' });
   }
 
   /**
