@@ -68,10 +68,30 @@ class Database {
       platesSet.add(vehicle.plate_number);
     }
 
-    await store.set('vehicles:index', JSON.stringify([...platesSet]));
+    const newIndex = [...platesSet];
+    await store.set('vehicles:index', JSON.stringify(newIndex));
 
-    // Инвалидируем кэш статистики
-    await this._invalidateStatsCache();
+    // Пересчитываем статистику по ВСЕМ автомобилям из нового индекса
+    const allVehicles = [];
+    for (const plate of newIndex) {
+      const vehicleData = await store.get(`vehicle:${plate}`);
+      if (vehicleData) {
+        allVehicles.push(JSON.parse(vehicleData));
+      }
+    }
+
+    const stats = {
+      total: allVehicles.length,
+      allowed: allVehicles.filter(v => v.access_status === 'allowed').length,
+      denied: allVehicles.filter(v => v.access_status === 'denied').length,
+      permanent: allVehicles.filter(v => v.pass_type === 'permanent').length,
+      temporary: allVehicles.filter(v => v.pass_type === 'temporary').length
+    };
+
+    await store.set('vehicles:stats', JSON.stringify({
+      data: stats,
+      cached_at: new Date().toISOString()
+    }));
 
     return vehicles.length;
   }
