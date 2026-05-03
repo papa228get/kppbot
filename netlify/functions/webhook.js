@@ -31,15 +31,19 @@ exports.handler = async (event, context) => {
 
     // Инициализация зависимостей
     console.log('Initializing database...');
-    // Создаем wrapper для getStore с параметрами из окружения
+    console.log('Environment check:', {
+      hasSiteId: !!process.env.SITE_ID,
+      hasContext: !!context,
+      contextKeys: context ? Object.keys(context) : []
+    });
+
+    // Используем встроенные переменные Netlify
     const getStoreWithConfig = (options) => {
-      const config = {
+      return getStore({
         ...options,
-        siteID: process.env.SITE_ID || context.site?.id,
-        token: process.env.NETLIFY_TOKEN || context.clientContext?.custom?.netlify_token
-      };
-      console.log('Store config:', { siteID: config.siteID, hasToken: !!config.token });
-      return getStore(config);
+        siteID: process.env.SITE_ID,
+        // Netlify автоматически предоставляет токен в production
+      });
     };
     const db = new Database(getStoreWithConfig);
     console.log('Initializing state manager...');
