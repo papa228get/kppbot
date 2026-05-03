@@ -38,6 +38,17 @@ class IndexManager {
   }
 
   /**
+   * Получить индекс с strong consistency (без кэша)
+   * Используется для гарантированно актуальных данных
+   */
+  async getIndexStrong() {
+    const store = this.getStore({ name: this.storeName, consistency: 'strong' });
+    const indexData = await store.get('vehicles:index');
+    const index = indexData ? JSON.parse(indexData) : [];
+    return index;
+  }
+
+  /**
    * Добавить номер в индекс
    */
   async addToIndex(plateNumber) {

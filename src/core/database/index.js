@@ -121,7 +121,7 @@ class Database {
    */
   async getStatsRealtime() {
     return await this.statsCalculator.calculateStatsOnTheFly(
-      async () => await this.indexManager.getIndex(),
+      async () => await this.indexManager.getIndexStrong(),
       async (plate) => await this.vehicleRepository.findVehicle(plate)
     );
   }
