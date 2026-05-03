@@ -232,8 +232,8 @@ class Database {
     // Обновляем индекс
     await this._updateIndex(plateNumber, 'remove');
 
-    // Инвалидируем кэш статистики
-    await this._invalidateStatsCache();
+    // Пересчитываем статистику сразу
+    await this._recalculateStats();
 
     return true;
   }
@@ -326,8 +326,19 @@ class Database {
     // Очищаем индекс
     await store.delete('vehicles:index');
 
-    // Очищаем кэш статистики
-    await store.delete('vehicles:stats');
+    // Пересчитываем статистику (будет 0 по всем полям)
+    const stats = {
+      total: 0,
+      allowed: 0,
+      denied: 0,
+      permanent: 0,
+      temporary: 0
+    };
+
+    await store.set('vehicles:stats', JSON.stringify({
+      data: stats,
+      cached_at: new Date().toISOString()
+    }));
 
     return true;
   }
@@ -399,6 +410,39 @@ class Database {
   async _invalidateStatsCache() {
     const store = this._getStore();
     await store.delete('vehicles:stats');
+  }
+
+  /**
+   * Пересчитать и сохранить статистику (приватный метод)
+   */
+  async _recalculateStats() {
+    const store = this._getStore();
+
+    // Получаем индекс
+    const indexData = await store.get('vehicles:index');
+    const allPlates = indexData ? JSON.parse(indexData) : [];
+
+    // Загружаем все автомобили
+    const allVehicles = [];
+    for (const plate of allPlates) {
+      const vehicleData = await store.get(`vehicle:${plate}`);
+      if (vehicleData) {
+        allVehicles.push(JSON.parse(vehicleData));
+      }
+    }
+
+    const stats = {
+      total: allVehicles.length,
+      allowed: allVehicles.filter(v => v.access_status === 'allowed').length,
+      denied: allVehicles.filter(v => v.access_status === 'denied').length,
+      permanent: allVehicles.filter(v => v.pass_type === 'permanent').length,
+      temporary: allVehicles.filter(v => v.pass_type === 'temporary').length
+    };
+
+    await store.set('vehicles:stats', JSON.stringify({
+      data: stats,
+      cached_at: new Date().toISOString()
+    }));
   }
 }
 
