@@ -78,9 +78,18 @@ class AddOnelineStateHandler {
       );
 
       if (result) {
+        // Задержка для eventual consistency перед чтением
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
         const vehicle = await this.vehicleService.findVehicle(plateNumber);
-        const cardData = VehicleFormatter.formatCard(vehicle, 'menu_back', true);
-        await this.telegram.send(chatId, '✅ <b>Автомобиль успешно добавлен!</b>\n\n' + cardData.text, cardData.keyboard);
+
+        if (vehicle) {
+          const cardData = VehicleFormatter.formatCard(vehicle, 'menu_back', true);
+          await this.telegram.send(chatId, '✅ <b>Автомобиль успешно добавлен!</b>\n\n' + cardData.text, cardData.keyboard);
+        } else {
+          // Если не нашли - просто сообщаем об успехе без карточки
+          await this.telegram.send(chatId, `✅ <b>Автомобиль успешно добавлен!</b>\n\n🚗 ${plateNumber}\n🏷 ${brand}\n📋 ${passType === 'permanent' ? 'Постоянный' : 'Временный'}`);
+        }
       } else {
         await this.telegram.send(chatId, '❌ Автомобиль с таким номером уже существует');
       }
