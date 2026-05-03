@@ -64,6 +64,16 @@ class AddVehicleStateHandler {
       return;
     }
 
+    // Проверяем текущее состояние - защита от дублирования
+    const currentState = await this.stateManager.getState(userId);
+    if (currentState && currentState.state.startsWith('awaiting_brand:')) {
+      const stateData = this.stateManager.extractDataFromState(currentState.state);
+      if (stateData && stateData.plate_number === plateNumber) {
+        // Уже обработали этот номер, не дублируем сообщение
+        return;
+      }
+    }
+
     // Проверяем, не существует ли уже
     const existing = await this.vehicleService.findVehicle(plateNumber);
     if (existing) {

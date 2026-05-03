@@ -159,13 +159,13 @@ class VehicleActionCallbackHandler {
 
     if (passType === 'permanent') {
       // Для постоянного пропуска сразу переходим к заметкам
-      await this.stateManager.clearState(userId);
+      // Прямая перезапись состояния без clearState для избежания race condition
       await this.stateManager.setStateWithData(userId, 'awaiting_notes', fullData);
       const keyboard = KeyboardBuilder.buildNavigationButtons(true);
       await this.telegram.send(chatId, '📝 Введите заметки (или отправьте "-" чтобы пропустить):', keyboard);
     } else {
       // Для временного пропуска запрашиваем дату
-      await this.stateManager.clearState(userId);
+      // Прямая перезапись состояния без clearState для избежания race condition
       await this.stateManager.setStateWithData(userId, 'awaiting_expiry', fullData);
       const keyboard = KeyboardBuilder.buildNavigationButtons(true);
       await this.telegram.send(chatId, '📅 Введите дату окончания пропуска в формате ДД.ММ.ГГГГ (например: 31.12.2026):', keyboard);

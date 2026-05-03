@@ -11,10 +11,17 @@ class StateManager {
   }
 
   /**
-   * Получить store для работы с Blobs
+   * Получить store для работы с Blobs (eventual consistency)
    */
   _getStore() {
     return this.getStore({ name: this.storeName, consistency: 'eventual' });
+  }
+
+  /**
+   * Получить store с strong consistency для критических операций
+   */
+  _getStoreStrong() {
+    return this.getStore({ name: this.storeName, consistency: 'strong' });
   }
 
   /**
@@ -67,7 +74,7 @@ class StateManager {
 
     // Увеличенная задержка для eventual consistency
     // Даем Blobs больше времени на репликацию данных
-    await new Promise(resolve => setTimeout(resolve, 200));
+    await new Promise(resolve => setTimeout(resolve, 300));
 
     // Очищаем старые состояния
     await this._cleanOldStates();
@@ -120,7 +127,30 @@ class StateManager {
     const stateKey = `${state}:${encoded}`;
 
     // Сохраняем минимальный флаг в Blobs, данные в ключе
+    // Задержка уже включена в setState()
     await this.setState(userId, stateKey, {});
+  }
+
+  /**
+   * Обновить состояние без предварительного удаления
+   * Используется для прямой перезаписи состояния
+   */
+  async updateState(userId, state, data = {}) {
+    const store = this._getStore();
+
+    const stateData = {
+      state,
+      data,
+      timestamp: new Date().toISOString()
+    };
+
+    await store.set(`state:${userId}`, JSON.stringify(stateData));
+
+    // Обновляем кэш
+    this.cache.set(userId, stateData);
+
+    // Задержка для eventual consistency
+    await new Promise(resolve => setTimeout(resolve, 300));
   }
 
   /**
