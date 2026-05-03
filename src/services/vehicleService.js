@@ -33,6 +33,10 @@ class VehicleService {
     return await this.db.getVehiclesPaginated(page, perPage);
   }
 
+  async getAllVehicles() {
+    return await this.db.getAllVehicles();
+  }
+
   async getStats() {
     return await this.db.getStats();
   }

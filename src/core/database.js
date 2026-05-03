@@ -133,6 +133,28 @@ class Database {
   }
 
   /**
+   * Получить все автомобили
+   */
+  async getAllVehicles() {
+    const store = this._getStore();
+
+    // Получаем индекс всех номеров
+    const indexData = await store.get('vehicles:index');
+    const allPlates = indexData ? JSON.parse(indexData) : [];
+
+    // Загружаем данные всех автомобилей
+    const vehicles = [];
+    for (const plate of allPlates) {
+      const vehicle = await this.findVehicle(plate);
+      if (vehicle) {
+        vehicles.push(vehicle);
+      }
+    }
+
+    return vehicles;
+  }
+
+  /**
    * Удалить автомобиль
    */
   async removeVehicle(plateNumber) {
