@@ -31,11 +31,19 @@ exports.handler = async (event, context) => {
 
     // Инициализация зависимостей
     console.log('Initializing database...');
-    // Передаем context для доступа к Netlify Blobs
-    const getStoreWithContext = (options) => getStore({ ...options, context });
-    const db = new Database(getStoreWithContext);
+    // Создаем wrapper для getStore с параметрами из окружения
+    const getStoreWithConfig = (options) => {
+      const config = {
+        ...options,
+        siteID: process.env.SITE_ID || context.site?.id,
+        token: process.env.NETLIFY_TOKEN || context.clientContext?.custom?.netlify_token
+      };
+      console.log('Store config:', { siteID: config.siteID, hasToken: !!config.token });
+      return getStore(config);
+    };
+    const db = new Database(getStoreWithConfig);
     console.log('Initializing state manager...');
-    const stateManager = new StateManager(getStoreWithContext);
+    const stateManager = new StateManager(getStoreWithConfig);
     const telegram = new TelegramApi(process.env.BOT_TOKEN);
     const vehicleService = new VehicleService(db);
     const accessChecker = new AccessChecker(db);
