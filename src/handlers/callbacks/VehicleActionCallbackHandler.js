@@ -118,10 +118,7 @@ class VehicleActionCallbackHandler {
     // Декодируем данные из callback
     const vehicleData = JSON.parse(Buffer.from(encodedData, 'base64').toString());
 
-    // Очищаем старое состояние add_vehicle_plate если оно есть
-    await this.stateManager.clearState(userId);
-
-    // Устанавливаем состояние ожидания марки с данными в ключе
+    // Прямая перезапись состояния без clearState
     await this.stateManager.setStateWithData(userId, 'awaiting_brand', vehicleData);
 
     const keyboard = KeyboardBuilder.buildNavigationButtons(true);

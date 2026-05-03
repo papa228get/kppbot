@@ -145,15 +145,7 @@ exports.handler = async (event, context) => {
       }
 
       // Обработка обычного текста как номера автомобиля
-      // Перепроверяем состояние на случай eventual consistency
-      const finalState = await stateManager.getState(userId);
-      if (finalState && finalState.state) {
-        // Если состояние появилось, обрабатываем через stateHandler
-        await stateHandler.handle(message, finalState);
-      } else {
-        // Иначе обрабатываем как проверку номера
-        await messageHandler.handlePlateNumber(chatId, userId, text);
-      }
+      await messageHandler.handlePlateNumber(chatId, userId, text);
       return {
         statusCode: 200,
         body: JSON.stringify({ ok: true })

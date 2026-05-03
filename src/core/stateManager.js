@@ -11,10 +11,11 @@ class StateManager {
   }
 
   /**
-   * Получить store для работы с Blobs (eventual consistency)
+   * Получить store для работы с Blobs
+   * ВАЖНО: Используем strong consistency для состояний, чтобы избежать eventual consistency проблем
    */
   _getStore() {
-    return this.getStore({ name: this.storeName, consistency: 'eventual' });
+    return this.getStore({ name: this.storeName, consistency: 'strong' });
   }
 
   /**
@@ -72,9 +73,8 @@ class StateManager {
     // Обновляем кэш сразу после записи
     this.cache.set(userId, stateData);
 
-    // Увеличенная задержка для eventual consistency
-    // Даем Blobs больше времени на репликацию данных
-    await new Promise(resolve => setTimeout(resolve, 300));
+    // Задержка для гарантии записи (даже с strong consistency)
+    await new Promise(resolve => setTimeout(resolve, 100));
 
     // Очищаем старые состояния
     await this._cleanOldStates();
@@ -149,8 +149,8 @@ class StateManager {
     // Обновляем кэш
     this.cache.set(userId, stateData);
 
-    // Задержка для eventual consistency
-    await new Promise(resolve => setTimeout(resolve, 300));
+    // Задержка для гарантии записи
+    await new Promise(resolve => setTimeout(resolve, 100));
   }
 
   /**
