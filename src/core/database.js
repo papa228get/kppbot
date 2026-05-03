@@ -16,7 +16,7 @@ class Database {
   }
 
   /**
-   * Добавить автомобиль (без проверки на дубликаты)
+   * Добавить автомобиль (без проверки на дубликаты, без обновления индекса)
    */
   async addVehicle(plateNumber, brand, accessStatus, passType, expiryDate, notes) {
     const store = this._getStore();
@@ -34,13 +34,46 @@ class Database {
     // Сохраняем автомобиль
     await store.set(`vehicle:${plateNumber}`, JSON.stringify(vehicle));
 
-    // Обновляем индекс
-    await this._updateIndex(plateNumber, 'add');
+    return true;
+  }
+
+  /**
+   * Массовое добавление автомобилей с обновлением индекса одним вызовом
+   */
+  async addVehiclesBatch(vehicles) {
+    const store = this._getStore();
+
+    // Добавляем все автомобили
+    for (const vehicle of vehicles) {
+      const vehicleData = {
+        plate_number: vehicle.plate_number,
+        brand: vehicle.brand || '',
+        access_status: vehicle.access_status || 'allowed',
+        pass_type: vehicle.pass_type || 'temporary',
+        expiry_date: vehicle.expiry_date || null,
+        notes: vehicle.notes || '',
+        created_at: new Date().toISOString()
+      };
+
+      await store.set(`vehicle:${vehicle.plate_number}`, JSON.stringify(vehicleData));
+    }
+
+    // Обновляем индекс ОДИН РАЗ после всех добавлений
+    const indexData = await store.get('vehicles:index');
+    let allPlates = indexData ? JSON.parse(indexData) : [];
+
+    // Используем Set для дедупликации
+    const platesSet = new Set(allPlates);
+    for (const vehicle of vehicles) {
+      platesSet.add(vehicle.plate_number);
+    }
+
+    await store.set('vehicles:index', JSON.stringify([...platesSet]));
 
     // Инвалидируем кэш статистики
     await this._invalidateStatsCache();
 
-    return true;
+    return vehicles.length;
   }
 
   /**

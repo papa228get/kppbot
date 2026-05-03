@@ -140,27 +140,12 @@ class ImportService {
       uniqueVehicles.push(vehicle);
     }
 
-    // Импортируем уникальные автомобили БЕЗ проверки на дубликаты в базе
-    // (eventual consistency может показывать "призрачные" записи после очистки)
-    for (const vehicle of uniqueVehicles) {
-      try {
-        const result = await vehicleService.addVehicle(
-          vehicle.plate_number,
-          vehicle.brand,
-          vehicle.access_status,
-          vehicle.pass_type,
-          vehicle.expiry_date,
-          vehicle.notes
-        );
-
-        if (result) {
-          stats.added++;
-        } else {
-          stats.errors.push(`Строка ${vehicle.line_number}: Ошибка при добавлении в БД`);
-        }
-      } catch (error) {
-        stats.errors.push(`Строка ${vehicle.line_number}: ${error.message}`);
-      }
+    // Используем batch-метод для добавления всех автомобилей одним вызовом
+    try {
+      const added = await vehicleService.addVehiclesBatch(uniqueVehicles);
+      stats.added = added;
+    } catch (error) {
+      stats.errors.push(`Ошибка массового импорта: ${error.message}`);
     }
 
     return stats;

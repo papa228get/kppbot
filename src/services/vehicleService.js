@@ -14,6 +14,15 @@ class VehicleService {
     return await this.db.addVehicle(normalizedPlate, brand, accessStatus, passType, expiryDate, notes);
   }
 
+  async addVehiclesBatch(vehicles) {
+    // Нормализуем номера во всех автомобилях
+    const normalizedVehicles = vehicles.map(v => ({
+      ...v,
+      plate_number: PlateValidator.normalize(v.plate_number)
+    }));
+    return await this.db.addVehiclesBatch(normalizedVehicles);
+  }
+
   async addVehicleWithCheck(plateNumber, brand, accessStatus, passType, expiryDate, notes) {
     const normalizedPlate = PlateValidator.normalize(plateNumber);
     return await this.db.addVehicleWithCheck(normalizedPlate, brand, accessStatus, passType, expiryDate, notes);
