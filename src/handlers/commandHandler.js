@@ -47,24 +47,9 @@ class CommandHandler {
     }
 
     const paginationData = await this.vehicleService.getVehiclesList(1, 5);
-    const listData = VehicleFormatter.formatInteractiveList(paginationData);
-    await this.telegram.send(chatId, listData.text, listData.keyboard);
-  }
-
-  /**
-   * Обработать команду /stats
-   */
-  async handleStats(chatId, isAdmin) {
-    if (!isAdmin) {
-      await this.telegram.send(chatId, '❌ У вас нет прав для выполнения этой команды');
-      return;
-    }
-
-    // Используем realtime статистику - всегда пересчитываем заново
-    // Это гарантирует актуальность, игнорируя eventual consistency Blobs
     const stats = await this.vehicleService.getStatsRealtime();
-    const text = StatsFormatter.format(stats);
-    await this.telegram.send(chatId, text);
+    const listData = VehicleFormatter.formatInteractiveListWithStats(paginationData, stats);
+    await this.telegram.send(chatId, listData.text, listData.keyboard);
   }
 
   /**

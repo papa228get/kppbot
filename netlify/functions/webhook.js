@@ -125,10 +125,6 @@ exports.handler = async (event, context) => {
             await commandHandler.handleList(chatId, isAdmin);
             break;
 
-          case '/stats':
-            await commandHandler.handleStats(chatId, isAdmin);
-            break;
-
           case '/import':
             await commandHandler.handleImport(chatId, userId, isAdmin);
             break;

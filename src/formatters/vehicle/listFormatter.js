@@ -116,6 +116,77 @@ class ListFormatter {
       keyboard
     };
   }
+
+  /**
+   * Форматировать интерактивный список со статистикой
+   */
+  static formatInteractiveListWithStats(paginationData, stats) {
+    const { vehicles, total, page, total_pages } = paginationData;
+
+    // Формируем текст со статистикой
+    let text = '📊 <b>Статистика базы данных</b>\n\n';
+    text += `📋 Всего автомобилей: <b>${stats.total}</b>\n\n`;
+    text += '<b>По статусу доступа:</b>\n';
+    text += `✅ Разрешено: ${stats.allowed}\n`;
+    text += `⛔ Запрещено: ${stats.denied}\n\n`;
+    text += '<b>По типу пропуска:</b>\n';
+    text += `🔄 Постоянный: ${stats.permanent}\n`;
+    text += `⏳ Временный: ${stats.temporary}\n\n`;
+    text += '📋 <b>Список автомобилей:</b>';
+
+    // Если база пуста - показываем только кнопку "Назад"
+    if (total === 0) {
+      return {
+        text: text + '\n\nБаза данных пуста',
+        keyboard: {
+          inline_keyboard: [
+            [{ text: '⬅️ Назад', callback_data: 'menu_back' }]
+          ]
+        }
+      };
+    }
+
+    // Создаем кнопки для каждого авто (по одной в ряд)
+    const vehicleButtons = vehicles.map(vehicle => {
+      const icon = this.getStatusIcon(vehicle);
+      return [{
+        text: `${icon} ${vehicle.plate_number}`,
+        callback_data: `view_vehicle:${vehicle.plate_number}`
+      }];
+    });
+
+    // Кнопки навигации по страницам
+    const navRow = [];
+    if (page > 1) {
+      navRow.push({ text: '⬅️', callback_data: `list_page:${page - 1}` });
+    }
+
+    // Центральная кнопка с номером страницы (пустышка)
+    navRow.push({ text: `${page}/${total_pages}`, callback_data: 'list_page_info' });
+
+    if (page < total_pages) {
+      navRow.push({ text: '➡️', callback_data: `list_page:${page + 1}` });
+    }
+
+    // Кнопки поиска и возврата
+    const actionButtons = [
+      { text: '🔍 Поиск', callback_data: 'list_search' },
+      { text: '⬅️ Назад', callback_data: 'menu_back' }
+    ];
+
+    const keyboard = {
+      inline_keyboard: [
+        ...vehicleButtons,
+        ...(navRow.length > 1 ? [navRow] : []), // Показываем только если есть навигация
+        actionButtons
+      ]
+    };
+
+    return {
+      text,
+      keyboard
+    };
+  }
 }
 
 module.exports = ListFormatter;

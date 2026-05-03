@@ -37,6 +37,13 @@ class VehicleFormatter {
   }
 
   /**
+   * Форматирование интерактивного списка со статистикой
+   */
+  static formatInteractiveListWithStats(paginationData, stats) {
+    return ListFormatter.formatInteractiveListWithStats(paginationData, stats);
+  }
+
+  /**
    * Форматирование результатов поиска с множественными совпадениями
    */
   static formatSearchResults(vehicles) {

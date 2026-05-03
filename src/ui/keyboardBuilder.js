@@ -15,9 +15,6 @@ class KeyboardBuilder {
           ],
           [
             { text: '📥 Импорт', callback_data: 'menu_import' },
-            { text: '📊 Статистика', callback_data: 'menu_stats' }
-          ],
-          [
             { text: 'ℹ️ Справка', callback_data: 'menu_help' }
           ]
         ]
