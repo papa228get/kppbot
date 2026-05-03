@@ -12,17 +12,18 @@ class StateManager {
 
   /**
    * Получить store для работы с Blobs
-   * ВАЖНО: Используем strong consistency для состояний, чтобы избежать eventual consistency проблем
+   * Используем eventual consistency (strong не поддерживается в Netlify окружении)
    */
   _getStore() {
-    return this.getStore({ name: this.storeName, consistency: 'strong' });
+    return this.getStore({ name: this.storeName, consistency: 'eventual' });
   }
 
   /**
    * Получить store с strong consistency для критических операций
+   * ПРИМЕЧАНИЕ: Strong consistency не поддерживается, используем eventual
    */
   _getStoreStrong() {
-    return this.getStore({ name: this.storeName, consistency: 'strong' });
+    return this.getStore({ name: this.storeName, consistency: 'eventual' });
   }
 
   /**
@@ -73,8 +74,9 @@ class StateManager {
     // Обновляем кэш сразу после записи
     this.cache.set(userId, stateData);
 
-    // Задержка для гарантии записи (даже с strong consistency)
-    await new Promise(resolve => setTimeout(resolve, 100));
+    // Увеличенная задержка для eventual consistency
+    // Критически важно для репликации данных
+    await new Promise(resolve => setTimeout(resolve, 500));
 
     // Очищаем старые состояния
     await this._cleanOldStates();
