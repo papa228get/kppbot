@@ -53,7 +53,7 @@ class CommandHandler {
   }
 
   /**
-   * Обработать команду /add
+   * Обработать команду /add - ОТКЛЮЧЕНО, используйте /import
    */
   async handleAdd(chatId, userId, isAdmin) {
     if (!isAdmin) {
@@ -61,9 +61,7 @@ class CommandHandler {
       return;
     }
 
-    await this.stateManager.setState(userId, 'add_vehicle_plate', {});
-    const keyboard = KeyboardBuilder.buildNavigationButtons(false);
-    await this.telegram.send(chatId, '🚗 Добавление нового автомобиля\n\nВведите номер автомобиля (например: А123БВ):', keyboard);
+    await this.telegram.send(chatId, '❌ Добавление через /add отключено.\n\nИспользуйте /import для массового импорта автомобилей из файла.');
   }
 
 

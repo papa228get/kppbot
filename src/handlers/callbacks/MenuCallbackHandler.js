@@ -81,7 +81,7 @@ class MenuCallbackHandler {
   }
 
   /**
-   * Обработать menu_add - начать добавление автомобиля
+   * Обработать menu_add - ОТКЛЮЧЕНО
    */
   async handleMenuAdd(chatId, messageId, userId) {
     const PlateValidator = require('../../validators/plateValidator');
@@ -92,9 +92,7 @@ class MenuCallbackHandler {
       return;
     }
 
-    await this.stateManager.setState(userId, 'add_vehicle_plate', {});
-    const keyboard = KeyboardBuilder.buildNavigationButtons(false);
-    await this.telegram.edit(chatId, messageId, '🚗 Добавление нового автомобиля\n\nВведите номер автомобиля (например: А123БВ):', keyboard);
+    await this.telegram.edit(chatId, messageId, '❌ Добавление через меню отключено.\n\nИспользуйте /import для массового импорта автомобилей из файла.');
   }
 
 
