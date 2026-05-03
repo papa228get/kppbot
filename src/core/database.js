@@ -268,7 +268,41 @@ class Database {
     // Очищаем кэш статистики
     await store.delete('vehicles:stats');
 
+    // Устанавливаем флаг очистки БД с timestamp
+    await this.setDatabaseCleared();
+
     return true;
+  }
+
+  /**
+   * Установить флаг "база данных очищена" с текущим timestamp
+   */
+  async setDatabaseCleared() {
+    const store = this._getStore();
+    await store.set('database:cleared_at', JSON.stringify({
+      timestamp: new Date().toISOString()
+    }));
+  }
+
+  /**
+   * Проверить, была ли база очищена недавно (в течение указанного времени)
+   * @param {number} withinMinutes - количество минут для проверки (по умолчанию 2)
+   * @returns {boolean} true если база была очищена в течение указанного времени
+   */
+  async wasDatabaseRecentlyCleared(withinMinutes = 2) {
+    const store = this._getStore();
+    const clearedData = await store.get('database:cleared_at');
+
+    if (!clearedData) {
+      return false;
+    }
+
+    const { timestamp } = JSON.parse(clearedData);
+    const clearedAt = new Date(timestamp).getTime();
+    const now = Date.now();
+    const minutesAgo = (now - clearedAt) / (1000 * 60);
+
+    return minutesAgo <= withinMinutes;
   }
 
   /**

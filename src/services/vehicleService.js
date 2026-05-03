@@ -41,6 +41,10 @@ class VehicleService {
     return await this.db.clearAllData();
   }
 
+  async wasDatabaseRecentlyCleared(withinMinutes = 2) {
+    return await this.db.wasDatabaseRecentlyCleared(withinMinutes);
+  }
+
   async getStats() {
     return await this.db.getStats();
   }

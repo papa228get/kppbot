@@ -141,15 +141,20 @@ class ImportService {
       uniqueVehicles.push(vehicle);
     }
 
+    // Проверяем, была ли база недавно очищена (обход eventual consistency)
+    const skipDuplicateCheck = await vehicleService.wasDatabaseRecentlyCleared(2);
+
     // Импортируем уникальные автомобили
     for (const vehicle of uniqueVehicles) {
       try {
-        // Проверяем существование автомобиля в базе
-        const existing = await vehicleService.findVehicle(vehicle.plate_number);
+        // Проверяем существование автомобиля в базе только если база не была недавно очищена
+        if (!skipDuplicateCheck) {
+          const existing = await vehicleService.findVehicle(vehicle.plate_number);
 
-        if (existing) {
-          stats.skipped++;
-          continue;
+          if (existing) {
+            stats.skipped++;
+            continue;
+          }
         }
 
         // Добавляем автомобиль
