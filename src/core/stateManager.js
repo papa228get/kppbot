@@ -6,6 +6,8 @@ class StateManager {
   constructor(getStore) {
     this.getStore = getStore;
     this.storeName = 'kppbot';
+    // In-memory кэш для решения проблемы eventual consistency
+    this.cache = new Map();
   }
 
   /**
@@ -19,6 +21,11 @@ class StateManager {
    * Получить состояние пользователя
    */
   async getState(userId) {
+    // Сначала проверяем кэш
+    if (this.cache.has(userId)) {
+      return this.cache.get(userId);
+    }
+
     const store = this._getStore();
     const data = await store.get(`state:${userId}`);
 
@@ -34,6 +41,9 @@ class StateManager {
       await this.clearState(userId);
       return null;
     }
+
+    // Кэшируем состояние
+    this.cache.set(userId, state);
 
     return state;
   }
@@ -51,6 +61,9 @@ class StateManager {
     };
 
     await store.set(`state:${userId}`, JSON.stringify(stateData));
+
+    // Обновляем кэш сразу после записи
+    this.cache.set(userId, stateData);
 
     // Очищаем старые состояния
     await this._cleanOldStates();
@@ -76,6 +89,9 @@ class StateManager {
   async clearState(userId) {
     const store = this._getStore();
     await store.delete(`state:${userId}`);
+
+    // Удаляем из кэша
+    this.cache.delete(userId);
   }
 
   /**
