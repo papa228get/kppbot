@@ -59,15 +59,8 @@ class CallbackHandler {
     if (data === 'menu_stats') {
       const StatsFormatter = require('../formatters/statsFormatter');
 
-      // Принудительно пересчитываем статистику (обход кэша)
-      const allVehicles = await this.vehicleService.getAllVehicles();
-      const stats = {
-        total: allVehicles.length,
-        allowed: allVehicles.filter(v => v.access_status === 'allowed').length,
-        denied: allVehicles.filter(v => v.access_status === 'denied').length,
-        permanent: allVehicles.filter(v => v.pass_type === 'permanent').length,
-        temporary: allVehicles.filter(v => v.pass_type === 'temporary').length
-      };
+      // Читаем статистику из кэша (который обновляется после каждого изменения)
+      const stats = await this.vehicleService.getStats();
 
       const text = StatsFormatter.format(stats);
       const keyboard = {

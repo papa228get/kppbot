@@ -153,6 +153,9 @@ class CommandHandler {
     }
 
     try {
+      // Отправляем сообщение о начале удаления
+      const progressMsg = await this.telegram.send(chatId, '🗑️ Удаляю данные из БД...');
+
       // Получаем количество автомобилей до удаления
       const allVehicles = await this.vehicleService.getAllVehicles();
       const totalCount = allVehicles.length;
