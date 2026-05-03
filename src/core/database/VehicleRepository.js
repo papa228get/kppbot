@@ -175,8 +175,7 @@ class VehicleRepository {
    * Используется для гарантированно актуальных данных
    */
   async getAllVehiclesDirect() {
-    // Используем strong consistency для гарантированно актуальных данных
-    const store = this.getStore({ name: this.storeName, consistency: 'strong' });
+    const store = this._getStore();
 
     // Получаем список всех ключей с префиксом vehicle:
     const { blobs } = await store.list({ prefix: 'vehicle:' });
