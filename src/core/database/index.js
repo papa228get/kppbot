@@ -120,8 +120,8 @@ class Database {
    * Пересчитывает статистику на лету для мгновенного обновления
    */
   async getStatsRealtime() {
-    // Получаем все автомобили напрямую (обходим кэш индекса)
-    const vehicles = await this.getAllVehicles();
+    // Получаем все автомобили НАПРЯМУЮ из Blobs, минуя индекс
+    const vehicles = await this.vehicleRepository.getAllVehiclesDirect();
     return this.statsCalculator.calculateStats(vehicles);
   }
 

@@ -171,6 +171,27 @@ class VehicleRepository {
   }
 
   /**
+   * Получить все автомобили напрямую из Blobs (без индекса)
+   * Используется для гарантированно актуальных данных
+   */
+  async getAllVehiclesDirect() {
+    const store = this._getStore();
+
+    // Получаем список всех ключей с префиксом vehicle:
+    const { blobs } = await store.list({ prefix: 'vehicle:' });
+
+    const vehicles = [];
+    for (const blob of blobs) {
+      const data = await store.get(blob.key);
+      if (data) {
+        vehicles.push(JSON.parse(data));
+      }
+    }
+
+    return vehicles;
+  }
+
+  /**
    * Удалить автомобиль
    */
   async removeVehicle(plateNumber) {
