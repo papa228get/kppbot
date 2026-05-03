@@ -61,6 +61,7 @@ class ListFormatter {
   static formatInteractiveList(paginationData) {
     const { vehicles, total, page, total_pages } = paginationData;
 
+    // Если база пуста - показываем только кнопку "Назад"
     if (total === 0) {
       return {
         text: '📋 Список автомобилей\n\nБаза данных пуста',

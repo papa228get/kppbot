@@ -157,6 +157,8 @@ class CommandHandler {
       const allVehicles = await this.vehicleService.getAllVehicles();
 
       if (allVehicles.length === 0) {
+        // Принудительно очищаем индекс и кэш даже если база пуста
+        await this.vehicleService.clearAllData();
         await this.telegram.send(chatId, '📋 База данных уже пуста');
         // Отправляем главное меню
         const keyboard = KeyboardBuilder.buildMainMenu(isAdmin);
