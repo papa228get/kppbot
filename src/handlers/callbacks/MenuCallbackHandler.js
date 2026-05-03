@@ -36,8 +36,6 @@ class MenuCallbackHandler {
       await this.handleMenuHelp(chatId, messageId, userId);
     } else if (data === 'menu_list') {
       await this.handleMenuList(chatId, messageId);
-    } else if (data === 'menu_add') {
-      await this.handleMenuAdd(chatId, messageId, userId);
     } else if (data === 'menu_import') {
       await this.handleMenuImport(chatId, messageId, userId);
     }
@@ -80,22 +78,6 @@ class MenuCallbackHandler {
     await this.telegram.edit(chatId, messageId, listData.text, listData.keyboard);
   }
 
-  /**
-   * Обработать menu_add - начать добавление автомобиля
-   */
-  async handleMenuAdd(chatId, messageId, userId) {
-    const PlateValidator = require('../../validators/plateValidator');
-    const isAdmin = PlateValidator.isAdmin(userId);
-
-    if (!isAdmin) {
-      await this.telegram.answerCallback(callbackQuery.id, '❌ У вас нет прав для выполнения этой команды', true);
-      return;
-    }
-
-    await this.stateManager.setState(userId, 'add_vehicle_plate', {});
-    const keyboard = KeyboardBuilder.buildNavigationButtons(false);
-    await this.telegram.edit(chatId, messageId, '🚗 Добавление нового автомобиля\n\nВведите номер автомобиля (например: А123БВ):', keyboard);
-  }
 
   /**
    * Обработать menu_import - начать импорт файла

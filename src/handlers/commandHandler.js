@@ -52,19 +52,6 @@ class CommandHandler {
     await this.telegram.send(chatId, listData.text, listData.keyboard);
   }
 
-  /**
-   * Обработать команду /add
-   */
-  async handleAdd(chatId, userId, isAdmin) {
-    if (!isAdmin) {
-      await this.telegram.send(chatId, '❌ У вас нет прав для выполнения этой команды');
-      return;
-    }
-
-    await this.stateManager.setState(userId, 'add_vehicle_plate', {});
-    const keyboard = KeyboardBuilder.buildNavigationButtons(false);
-    await this.telegram.send(chatId, '🚗 Добавление нового автомобиля\n\nВведите номер автомобиля (например: А123БВ):', keyboard);
-  }
 
   /**
    * Обработать команду /remove

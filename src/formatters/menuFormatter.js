@@ -11,7 +11,6 @@ class MenuFormatter {
     if (isAdmin) {
       text += '<b>Команды администратора:</b>\n';
       text += '/start - Главное меню\n';
-      text += '/add - Добавить автомобиль\n';
       text += '/list - Показать все автомобили\n';
       text += '/import - Массовый импорт из файла\n';
       text += '/remove НОМЕР - Удалить автомобиль\n';

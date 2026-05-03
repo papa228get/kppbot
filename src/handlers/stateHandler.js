@@ -1,4 +1,3 @@
-const AddVehicleStateHandler = require('./states/AddVehicleStateHandler');
 const EditVehicleStateHandler = require('./states/EditVehicleStateHandler');
 const ImportStateHandler = require('./states/ImportStateHandler');
 
@@ -15,7 +14,6 @@ class StateHandler {
 
     // Инициализируем специализированные обработчики
     this.handlers = [
-      new AddVehicleStateHandler(telegram, vehicleService, stateManager),
       new EditVehicleStateHandler(telegram, vehicleService, stateManager)
       // ImportStateHandler будет добавлен после установки documentHandler
     ];

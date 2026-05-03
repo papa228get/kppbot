@@ -113,10 +113,6 @@ exports.handler = async (event, context) => {
             await commandHandler.handleHelp(chatId, isAdmin);
             break;
 
-          case '/add':
-            await commandHandler.handleAdd(chatId, userId, isAdmin);
-            break;
-
           case '/remove':
             await commandHandler.handleRemove(chatId, userId, text, isAdmin);
             break;
