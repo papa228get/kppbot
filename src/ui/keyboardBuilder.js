@@ -67,17 +67,15 @@ class KeyboardBuilder {
 
   /**
    * Кнопки выбора типа пропуска
-   * Передаем данные через callback_data для избежания проблем с eventual consistency
+   * НЕ передаем данные через callback_data (лимит 64 байта),
+   * данные уже в состоянии пользователя
    */
-  static buildPassTypeButtons(plateNumber, brand) {
-    // Кодируем данные в base64 для передачи через callback
-    const data = Buffer.from(JSON.stringify({ plate_number: plateNumber, brand: brand })).toString('base64');
-
+  static buildPassTypeButtons() {
     return {
       inline_keyboard: [
         [
-          { text: '🔄 Постоянный', callback_data: `pass_permanent:${data}` },
-          { text: '⏳ Временный', callback_data: `pass_temporary:${data}` }
+          { text: '🔄 Постоянный', callback_data: 'pass_permanent' },
+          { text: '⏳ Временный', callback_data: 'pass_temporary' }
         ],
         [
           { text: '❌ Отмена', callback_data: 'nav_cancel' }

@@ -119,8 +119,6 @@ class StateManager {
     const encoded = Buffer.from(JSON.stringify(data)).toString('base64');
     const stateKey = `${state}:${encoded}`;
 
-    console.log(`[StateManager] Setting state with data for user ${userId}:`, state);
-
     // Сохраняем минимальный флаг в Blobs, данные в ключе
     await this.setState(userId, stateKey, {});
   }
@@ -142,7 +140,6 @@ class StateManager {
 
     try {
       const decoded = JSON.parse(Buffer.from(encoded, 'base64').toString());
-      console.log(`[StateManager] Extracted data from state:`, decoded);
       return decoded;
     } catch (e) {
       console.error(`[StateManager] Failed to extract data from state:`, e.message);

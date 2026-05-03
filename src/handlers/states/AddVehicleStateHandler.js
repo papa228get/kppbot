@@ -28,6 +28,7 @@ class AddVehicleStateHandler {
   canHandle(state) {
     return state.startsWith('add_vehicle_') ||
            state.startsWith('awaiting_brand:') ||
+           state.startsWith('awaiting_pass_type:') ||
            state.startsWith('awaiting_expiry:') ||
            state.startsWith('awaiting_notes:');
   }
@@ -71,24 +72,12 @@ class AddVehicleStateHandler {
       return;
     }
 
-    // Кодируем данные и отправляем кнопку "Продолжить"
+    // Сразу переходим к вводу марки
     const data = { plate_number: plateNumber };
-    const encoded = Buffer.from(JSON.stringify(data)).toString('base64');
-    const keyboard = {
-      inline_keyboard: [
-        [
-          { text: '➡️ Продолжить', callback_data: `continue_add:${encoded}` }
-        ],
-        [
-          { text: '❌ Отмена', callback_data: 'nav_cancel' }
-        ]
-      ]
-    };
+    await this.stateManager.setStateWithData(userId, 'awaiting_brand', data);
 
-    await this.telegram.send(chatId, `✅ Номер принят: <b>${plateNumber}</b>\n\nНажмите "Продолжить" для ввода марки:`, keyboard);
-
-    // НЕ очищаем состояние - оно будет очищено при нажатии кнопки
-    // await this.stateManager.clearState(userId);
+    const keyboard = KeyboardBuilder.buildNavigationButtons(true);
+    await this.telegram.send(chatId, `✅ Номер принят: <b>${plateNumber}</b>\n\n🏷 Введите марку автомобиля:`, keyboard);
   }
 
   /**
@@ -106,13 +95,19 @@ class AddVehicleStateHandler {
 
     const brand = text.trim();
 
-    // Отправляем кнопки выбора типа пропуска с данными
-    const keyboard = KeyboardBuilder.buildPassTypeButtons(stateData.plate_number, brand);
-    await this.telegram.send(chatId, '📋 Выберите тип пропуска:', keyboard);
+    // Добавляем марку к данным и сохраняем в состоянии
+    const newData = {
+      ...stateData,
+      brand: brand
+    };
 
-    // НЕ очищаем состояние сразу - пусть истечет автоматически
-    // Это защищает от дубликатов сообщений от Telegram
-    // await this.stateManager.clearState(userId);
+    // Устанавливаем состояние ожидания выбора типа пропуска с данными в ключе
+    await this.stateManager.setStateWithData(userId, 'awaiting_pass_type', newData);
+
+    // Отправляем кнопки выбора типа пропуска БЕЗ данных в callback
+    const keyboard = KeyboardBuilder.buildPassTypeButtons();
+
+    await this.telegram.send(chatId, '📋 Выберите тип пропуска:', keyboard);
   }
 
   /**
