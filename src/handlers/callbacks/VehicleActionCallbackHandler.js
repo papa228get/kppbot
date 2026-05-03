@@ -3,7 +3,7 @@ const KeyboardBuilder = require('../../ui/keyboardBuilder');
 
 /**
  * VehicleActionCallbackHandler - обработка действий с автомобилями
- * Обрабатывает: toggle_status, delete_vehicle, confirm_delete
+ * Обрабатывает: toggle_status, delete_vehicle, confirm_delete, pass_permanent, pass_temporary
  */
 class VehicleActionCallbackHandler {
   constructor(telegram, vehicleService, stateManager) {
@@ -18,7 +18,9 @@ class VehicleActionCallbackHandler {
   canHandle(data) {
     return data.startsWith('toggle_status:') ||
            data.startsWith('delete_vehicle:') ||
-           data.startsWith('confirm_delete:');
+           data.startsWith('confirm_delete:') ||
+           data.startsWith('pass_permanent:') ||
+           data.startsWith('pass_temporary:');
   }
 
   /**
@@ -37,6 +39,8 @@ class VehicleActionCallbackHandler {
     } else if (data.startsWith('confirm_delete:')) {
       await this.handleConfirmDelete(data, chatId, messageId, callbackQuery.id);
       return; // Не вызываем answerCallback в конце, т.к. уже вызвали
+    } else if (data.startsWith('pass_permanent:') || data.startsWith('pass_temporary:')) {
+      await this.handlePassType(data, chatId, userId);
     }
 
     await this.telegram.answerCallback(callbackQuery.id);
@@ -101,6 +105,43 @@ class VehicleActionCallbackHandler {
     await this.telegram.edit(chatId, messageId, listData.text, listData.keyboard);
   }
 
+  /**
+   * Обработать pass_permanent/pass_temporary - выбор типа пропуска при добавлении
+   * Данные передаются через callback_data для избежания eventual consistency
+   */
+  async handlePassType(data, chatId, userId) {
+    // Извлекаем тип пропуска и данные из callback
+    const parts = data.split(':');
+    const passType = parts[0] === 'pass_permanent' ? 'permanent' : 'temporary';
+    const encodedData = parts[1];
+
+    // Декодируем данные из base64
+    const vehicleData = JSON.parse(Buffer.from(encodedData, 'base64').toString());
+
+    if (passType === 'permanent') {
+      // Для постоянного пропуска сразу переходим к заметкам
+      // Сохраняем ВСЕ данные в состояние одним вызовом
+      await this.stateManager.setState(userId, 'add_vehicle_notes', {
+        plate_number: vehicleData.plate_number,
+        brand: vehicleData.brand,
+        access_status: 'allowed',
+        pass_type: 'permanent'
+      });
+      const keyboard = KeyboardBuilder.buildNavigationButtons(true);
+      await this.telegram.send(chatId, '📝 Введите заметки (или отправьте "-" чтобы пропустить):', keyboard);
+    } else {
+      // Для временного пропуска запрашиваем дату
+      // Сохраняем ВСЕ данные в состояние одним вызовом
+      await this.stateManager.setState(userId, 'add_vehicle_expiry', {
+        plate_number: vehicleData.plate_number,
+        brand: vehicleData.brand,
+        access_status: 'allowed',
+        pass_type: 'temporary'
+      });
+      const keyboard = KeyboardBuilder.buildNavigationButtons(true);
+      await this.telegram.send(chatId, '📅 Введите дату окончания пропуска в формате ДД.ММ.ГГГГ (например: 31.12.2026):', keyboard);
+    }
+  }
 }
 
 module.exports = VehicleActionCallbackHandler;

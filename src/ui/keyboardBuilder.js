@@ -10,6 +10,7 @@ class KeyboardBuilder {
       return {
         inline_keyboard: [
           [
+            { text: '➕ Добавить авто', callback_data: 'menu_add' },
             { text: '📋 Список', callback_data: 'menu_list' }
           ],
           [
@@ -58,6 +59,27 @@ class KeyboardBuilder {
         ],
         [
           { text: '⬅️ Назад', callback_data: 'nav_back' },
+          { text: '❌ Отмена', callback_data: 'nav_cancel' }
+        ]
+      ]
+    };
+  }
+
+  /**
+   * Кнопки выбора типа пропуска
+   * Передаем данные через callback_data для избежания проблем с eventual consistency
+   */
+  static buildPassTypeButtons(plateNumber, brand) {
+    // Кодируем данные в base64 для передачи через callback
+    const data = Buffer.from(JSON.stringify({ plate_number: plateNumber, brand: brand })).toString('base64');
+
+    return {
+      inline_keyboard: [
+        [
+          { text: '🔄 Постоянный', callback_data: `pass_permanent:${data}` },
+          { text: '⏳ Временный', callback_data: `pass_temporary:${data}` }
+        ],
+        [
           { text: '❌ Отмена', callback_data: 'nav_cancel' }
         ]
       ]
