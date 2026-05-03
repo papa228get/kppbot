@@ -115,6 +115,17 @@ class Database {
     );
   }
 
+  /**
+   * Получить статистику в реальном времени (без кэша Blobs)
+   * Пересчитывает статистику на лету для мгновенного обновления
+   */
+  async getStatsRealtime() {
+    return await this.statsCalculator.calculateStatsOnTheFly(
+      async () => await this.indexManager.getIndex(),
+      async (plate) => await this.vehicleRepository.findVehicle(plate)
+    );
+  }
+
   // ==================== Приватные методы (для обратной совместимости) ====================
 
   /**

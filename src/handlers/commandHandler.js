@@ -60,7 +60,8 @@ class CommandHandler {
       return;
     }
 
-    const stats = await this.vehicleService.getStats();
+    // Используем realtime статистику для мгновенного обновления
+    const stats = await this.vehicleService.getStatsRealtime();
     const text = StatsFormatter.format(stats);
     await this.telegram.send(chatId, text);
   }

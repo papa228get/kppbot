@@ -97,6 +97,30 @@ class StatsCalculator {
     await store.delete('vehicles:stats');
     this.cacheManager.invalidateStats();
   }
+
+  /**
+   * Пересчитать статистику на лету без кэширования в Blobs
+   * Используется для мгновенного обновления статистики
+   * @param {Function} getIndexFn - функция для получения индекса номеров
+   * @param {Function} getVehicleFn - функция для получения данных автомобиля по номеру
+   * @returns {Object} статистика
+   */
+  async calculateStatsOnTheFly(getIndexFn, getVehicleFn) {
+    // Получаем свежий индекс (использует локальный кэш если доступен)
+    const allPlates = await getIndexFn();
+
+    // Загружаем данные всех автомобилей
+    const vehicles = [];
+    for (const plate of allPlates) {
+      const vehicle = await getVehicleFn(plate);
+      if (vehicle) {
+        vehicles.push(vehicle);
+      }
+    }
+
+    // Пересчитываем статистику
+    return this.calculateStats(vehicles);
+  }
 }
 
 module.exports = StatsCalculator;

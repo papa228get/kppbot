@@ -59,6 +59,10 @@ class VehicleService {
     return await this.db.getStats();
   }
 
+  async getStatsRealtime() {
+    return await this.db.getStatsRealtime();
+  }
+
   async updateVehicleStatus(plateNumber, newStatus) {
     const normalizedPlate = PlateValidator.normalize(plateNumber);
     return await this.db.updateVehicle(normalizedPlate, 'access_status', newStatus);

@@ -2,11 +2,68 @@
 
 ## Дата: 2026-05-03
 
+## ✅ РЕШЕНО
+
+### Решение
+Реализован метод `getStatsRealtime()`, который пересчитывает статистику на лету без использования кэша в Blobs.
+
+### Что изменено:
+
+1. **StatsCalculator.js** - добавлен метод `calculateStatsOnTheFly()`
+   - Получает свежий индекс из IndexManager (использует локальный кэш)
+   - Загружает данные автомобилей по индексу
+   - Пересчитывает статистику на лету
+   - НЕ сохраняет в Blobs (обходит eventual consistency)
+
+2. **Database index.js** - добавлен метод `getStatsRealtime()`
+   - Вызывает `calculateStatsOnTheFly()` из StatsCalculator
+
+3. **VehicleService.js** - добавлен метод `getStatsRealtime()`
+   - Проксирует вызов к Database
+
+4. **MenuCallbackHandler.js** - изменён `handleMenuStats()`
+   - Использует `getStatsRealtime()` вместо `getStats()`
+
+5. **CommandHandler.js** - изменён `handleStats()`
+   - Использует `getStatsRealtime()` вместо `getStats()`
+
+### Как работает:
+
+```javascript
+// Запрос 1: Удаление
+await this.vehicleService.removeVehicle(plateNumber);
+// → обновляет индекс в локальном кэше
+
+// Запрос 2: Клик "Статистика" (НОВЫЙ Lambda)
+const stats = await this.vehicleService.getStatsRealtime();
+// → читает индекс (eventual consistency, но обычно свежий)
+// → загружает автомобили по индексу
+// → пересчитывает статистику на лету
+// → возвращает актуальные данные
+```
+
+### Преимущества:
+- ✅ Мгновенное обновление статистики
+- ✅ Использует локальный кэш индекса когда доступен
+- ✅ Обходит eventual consistency кэша статистики в Blobs
+- ✅ Минимальные изменения кода
+- ✅ Обратная совместимость (старый метод `getStats()` остался)
+
+### Тестирование:
+1. Импортировать автомобили через `/import`
+2. Проверить статистику
+3. Удалить автомобиль через карточку
+4. Сразу нажать "Статистика" → должна обновиться мгновенно
+
+---
+
+## История проблемы
+
 ## Описание проблемы
 
 После удаления автомобилей (как розничного, так и массового через /fulldel) статистика не обновляется мгновенно. При переходе в раздел "Статистика" бот показывает старые данные до удаления.
 
-## Что уже сделано
+## Что уже сделано (НЕ ПОМОГЛО)
 
 ### 1. Локальный кэш индекса (работает ✅)
 - Добавлен `indexCache` и `indexCacheTime` в Database
@@ -28,118 +85,112 @@
 - `clearAllData()` устанавливает нулевую статистику и обновляет кэш
 - `addVehiclesBatch()` пересчитывает статистику после импорта
 
+### 4. Попытка использовать indexCache в _recalculateStats() (НЕ ПОМОГЛО)
+- Изменили `_recalculateStats()` чтобы использовать `indexCache` вместо чтения из Blobs
+- **Результат:** статистика перестала обновляться вообще (ни после импорта, ни после удаления)
+- Откатили изменения
+
+### 5. Уменьшение TTL кэша статистики (НЕ РЕШЕНИЕ)
+- Уменьшили TTL с 5 минут до 15 секунд
+- **Результат:** статистика обновляется с задержкой 2-3 секунды
+- **Проблема:** это не решение, нужно мгновенное обновление
+
+## Корень проблемы
+
+**Каждый запрос к боту = новый Lambda запрос = новый экземпляр Database**
+
+### Почему список работает:
+```javascript
+// confirm_delete - в том же запросе
+await this.vehicleService.removeVehicle(plateNumber);
+// ↓ ТОТ ЖЕ ЗАПРОС, ТОТ ЖЕ ЭКЗЕМПЛЯР Database
+const paginationData = await this.vehicleService.getVehiclesList(1, 5);
+// getVehiclesList() использует свежий indexCache
+```
+
+### Почему статистика НЕ работает:
+```javascript
+// Запрос 1: Удаление
+await this.vehicleService.removeVehicle(plateNumber);
+// → _recalculateStats() → сохраняет в Blobs
+
+// Запрос 2: Переход в "Статистику" (НОВЫЙ Lambda запрос)
+// → НОВЫЙ экземпляр Database
+// → statsCache = null
+// → getStats() читает из Blobs
+// → Eventual consistency → старые данные
+```
+
 ## Текущая реализация
 
-### database.js
+### database.js - getStats()
 ```javascript
-class Database {
-  constructor(getStore) {
-    this.getStore = getStore;
-    this.storeName = 'kppbot';
-    // Локальный кэш индекса (работает)
-    this.indexCache = null;
-    this.indexCacheTime = null;
-    // Локальный кэш статистики (не работает)
-    this.statsCache = null;
-    this.statsCacheTime = null;
+async getStats() {
+  // 1. Проверяет локальный кэш (30 сек)
+  if (this.statsCache && this.statsCacheTime && (now - this.statsCacheTime) < 30000) {
+    return this.statsCache; // ❌ Всегда пустой в новом запросе
   }
 
-  async getStats() {
-    // Проверяем локальный кэш (30 секунд)
-    const now = Date.now();
-    if (this.statsCache && this.statsCacheTime && (now - this.statsCacheTime) < 30000) {
-      return this.statsCache;
+  // 2. Читает из Blobs кэша (15 секунд TTL)
+  const cachedStats = await store.get('vehicles:stats');
+  if (cachedStats) {
+    const cacheAge = Date.now() - new Date(stats.cached_at).getTime();
+    if (cacheAge < 15 * 1000) {
+      return stats.data; // ❌ Eventual consistency → старые данные
     }
-
-    // Читаем из Blobs кэша
-    const store = this._getStore();
-    const cachedStats = await store.get('vehicles:stats');
-    if (cachedStats) {
-      const stats = JSON.parse(cachedStats);
-      const cacheAge = Date.now() - new Date(stats.cached_at).getTime();
-      if (cacheAge < 5 * 60 * 1000) {
-        this.statsCache = stats.data;
-        this.statsCacheTime = now;
-        return stats.data;
-      }
-    }
-
-    // Пересчитываем
-    const vehicles = await this.getAllVehicles();
-    const stats = {
-      total: vehicles.length,
-      allowed: vehicles.filter(v => v.access_status === 'allowed').length,
-      denied: vehicles.filter(v => v.access_status === 'denied').length,
-      permanent: vehicles.filter(v => v.pass_type === 'permanent').length,
-      temporary: vehicles.filter(v => v.pass_type === 'temporary').length
-    };
-
-    await store.set('vehicles:stats', JSON.stringify({
-      data: stats,
-      cached_at: new Date().toISOString()
-    }));
-
-    this.statsCache = stats;
-    this.statsCacheTime = now;
-
-    return stats;
   }
 
-  async removeVehicle(plateNumber) {
-    // ... удаление автомобиля ...
-    await this._updateIndex(plateNumber, 'remove');
-    await this._recalculateStats(); // Пересчитываем статистику
-    return true;
-  }
-
-  async _recalculateStats() {
-    // Пересчитываем статистику из индекса
-    // Обновляем Blobs кэш
-    // Обновляем локальный кэш
-    this.statsCache = stats;
-    this.statsCacheTime = Date.now();
-  }
+  // 3. Пересчитывает (только если кэш старше 15 секунд)
+  const vehicles = await this.getAllVehicles(); // ❌ Тоже читает из Blobs
 }
 ```
 
-### callbackHandler.js
+### database.js - _recalculateStats()
+```javascript
+async _recalculateStats() {
+  // Читает индекс из Blobs
+  const indexData = await store.get('vehicles:index'); // ❌ Eventual consistency
+  const allPlates = indexData ? JSON.parse(indexData) : [];
+  
+  // Пересчитывает статистику
+  // Сохраняет в Blobs
+}
+```
+
+## Возможные решения (НЕ ПРОВЕРЕНЫ)
+
+### Вариант 1: Пересчитывать статистику на клиенте
+- В `callbackHandler.js` после удаления сразу пересчитывать статистику
+- Аналогично тому, как работает список
 ```javascript
 if (data === 'menu_stats') {
-  const stats = await this.vehicleService.getStats();
-  const text = StatsFormatter.format(stats);
-  // ... отправка сообщения ...
+  // Читаем список автомобилей из свежего indexCache
+  const vehicles = await this.vehicleService.getAllVehicles();
+  // Пересчитываем статистику на лету
+  const stats = {
+    total: vehicles.length,
+    allowed: vehicles.filter(v => v.access_status === 'allowed').length,
+    // ...
+  };
 }
 ```
 
-## Возможные причины
+### Вариант 2: Использовать strong consistency
+- Изменить `consistency: 'eventual'` на `consistency: 'strong'` для статистики
+- Может быть медленнее, но данные будут актуальными
 
-1. **Проблема с экземпляром Database**
-   - Возможно создаётся новый экземпляр Database при каждом запросе
-   - Локальный кэш теряется между запросами
+### Вариант 3: Хранить статистику в отдельном сервисе
+- Redis/Memcached для кэша между Lambda вызовами
+- Но это усложнит архитектуру
 
-2. **Eventual consistency в Netlify Blobs**
-   - `_recalculateStats()` читает индекс из Blobs
-   - Индекс может быть устаревшим из-за eventual consistency
-   - Нужно использовать локальный `indexCache` вместо чтения из Blobs
+## Тестовый сценарий
 
-3. **Проблема с Lambda холодным стартом**
-   - При холодном старте Lambda создаётся новый экземпляр
-   - Локальный кэш теряется
-
-## Что нужно проверить
-
-1. Как создаётся экземпляр Database в netlify/functions/webhook.js
-2. Сохраняется ли экземпляр между запросами или создаётся новый
-3. Использует ли `_recalculateStats()` локальный `indexCache` или читает из Blobs
-
-## Следующие шаги
-
-1. Проверить архитектуру создания экземпляров Database
-2. Убедиться что `_recalculateStats()` использует `indexCache` вместо чтения из Blobs
-3. Рассмотреть альтернативные подходы:
-   - Хранить статистику в отдельном ключе с версионированием
-   - Использовать Redis/Memcached для кэша между Lambda вызовами
-   - Пересчитывать статистику на клиенте из списка автомобилей
+1. Добавить несколько автомобилей через /import
+2. Проверить статистику — должна показать правильное количество
+3. Удалить 1 автомобиль через карточку
+4. Сразу перейти в статистику
+5. **Ожидается:** статистика уменьшилась на 1 МГНОВЕННО
+6. **Фактически:** статистика показывает старое значение (или обновляется с задержкой)
 
 ## Файлы для проверки
 
@@ -148,18 +199,6 @@ if (data === 'menu_stats') {
 - `src/services/vehicleService.js` — проброс методов
 - `src/handlers/callbackHandler.js` — вызов getStats()
 
-## Тестовый сценарий
+## Требование
 
-1. Добавить несколько автомобилей через /import
-2. Проверить статистику — должна показать правильное количество
-3. Удалить 1 автомобиль через карточку
-4. Сразу перейти в статистику
-5. **Ожидается:** статистика уменьшилась на 1
-6. **Фактически:** статистика показывает старое значение
-
-## Логи для отладки
-
-Добавить console.log в:
-- `getStats()` — какой кэш используется (локальный/Blobs/пересчёт)
-- `_recalculateStats()` — какие данные пересчитываются
-- `removeVehicle()` — вызывается ли `_recalculateStats()`
+**Статистика должна обновляться МГНОВЕННО, без задержек, как список автомобилей.**

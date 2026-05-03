@@ -85,7 +85,8 @@ class MenuCallbackHandler {
    * Обработать menu_stats - показать статистику
    */
   async handleMenuStats(chatId, messageId) {
-    const stats = await this.vehicleService.getStats();
+    // Используем realtime статистику для мгновенного обновления
+    const stats = await this.vehicleService.getStatsRealtime();
     const text = StatsFormatter.format(stats);
     const keyboard = {
       inline_keyboard: [
