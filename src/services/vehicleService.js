@@ -9,9 +9,14 @@ class VehicleService {
     this.db = db;
   }
 
-  async addVehicle(plateNumber, brand, accessStatus, passType, expiryDate, notes, skipDuplicateCheck = false) {
+  async addVehicle(plateNumber, brand, accessStatus, passType, expiryDate, notes) {
     const normalizedPlate = PlateValidator.normalize(plateNumber);
-    return await this.db.addVehicle(normalizedPlate, brand, accessStatus, passType, expiryDate, notes, skipDuplicateCheck);
+    return await this.db.addVehicle(normalizedPlate, brand, accessStatus, passType, expiryDate, notes);
+  }
+
+  async addVehicleWithCheck(plateNumber, brand, accessStatus, passType, expiryDate, notes) {
+    const normalizedPlate = PlateValidator.normalize(plateNumber);
+    return await this.db.addVehicleWithCheck(normalizedPlate, brand, accessStatus, passType, expiryDate, notes);
   }
 
   async removeVehicle(plateNumber) {
@@ -39,10 +44,6 @@ class VehicleService {
 
   async clearAllData() {
     return await this.db.clearAllData();
-  }
-
-  async wasDatabaseRecentlyCleared(withinMinutes = 2) {
-    return await this.db.wasDatabaseRecentlyCleared(withinMinutes);
   }
 
   async getStats() {

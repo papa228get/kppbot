@@ -16,19 +16,10 @@ class Database {
   }
 
   /**
-   * Добавить автомобиль
-   * @param {boolean} skipDuplicateCheck - пропустить проверку на дубликаты (для обхода eventual consistency)
+   * Добавить автомобиль (без проверки на дубликаты)
    */
-  async addVehicle(plateNumber, brand, accessStatus, passType, expiryDate, notes, skipDuplicateCheck = false) {
+  async addVehicle(plateNumber, brand, accessStatus, passType, expiryDate, notes) {
     const store = this._getStore();
-
-    // Проверяем существование (если не пропускаем проверку)
-    if (!skipDuplicateCheck) {
-      const existing = await this.findVehicle(plateNumber);
-      if (existing) {
-        return false;
-      }
-    }
 
     const vehicle = {
       plate_number: plateNumber,
@@ -50,6 +41,19 @@ class Database {
     await this._invalidateStatsCache();
 
     return true;
+  }
+
+  /**
+   * Добавить автомобиль с проверкой на дубликаты
+   */
+  async addVehicleWithCheck(plateNumber, brand, accessStatus, passType, expiryDate, notes) {
+    // Проверяем существование
+    const existing = await this.findVehicle(plateNumber);
+    if (existing) {
+      return false;
+    }
+
+    return await this.addVehicle(plateNumber, brand, accessStatus, passType, expiryDate, notes);
   }
 
   /**
@@ -271,41 +275,7 @@ class Database {
     // Очищаем кэш статистики
     await store.delete('vehicles:stats');
 
-    // Устанавливаем флаг очистки БД с timestamp
-    await this.setDatabaseCleared();
-
     return true;
-  }
-
-  /**
-   * Установить флаг "база данных очищена" с текущим timestamp
-   */
-  async setDatabaseCleared() {
-    const store = this._getStore();
-    await store.set('database:cleared_at', JSON.stringify({
-      timestamp: new Date().toISOString()
-    }));
-  }
-
-  /**
-   * Проверить, была ли база очищена недавно (в течение указанного времени)
-   * @param {number} withinMinutes - количество минут для проверки (по умолчанию 2)
-   * @returns {boolean} true если база была очищена в течение указанного времени
-   */
-  async wasDatabaseRecentlyCleared(withinMinutes = 2) {
-    const store = this._getStore();
-    const clearedData = await store.get('database:cleared_at');
-
-    if (!clearedData) {
-      return false;
-    }
-
-    const { timestamp } = JSON.parse(clearedData);
-    const clearedAt = new Date(timestamp).getTime();
-    const now = Date.now();
-    const minutesAgo = (now - clearedAt) / (1000 * 60);
-
-    return minutesAgo <= withinMinutes;
   }
 
   /**

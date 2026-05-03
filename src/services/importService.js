@@ -123,7 +123,6 @@ class ImportService {
   async importVehicles(vehicles, vehicleService) {
     const stats = {
       added: 0,
-      skipped: 0,
       skipped_in_file: 0,
       errors: []
     };
@@ -141,32 +140,23 @@ class ImportService {
       uniqueVehicles.push(vehicle);
     }
 
-    // Проверяем, была ли база недавно очищена (обход eventual consistency)
-    const skipDuplicateCheck = await vehicleService.wasDatabaseRecentlyCleared(2);
-
-    // Импортируем уникальные автомобили
+    // Импортируем уникальные автомобили БЕЗ проверки на дубликаты в базе
+    // (eventual consistency может показывать "призрачные" записи после очистки)
     for (const vehicle of uniqueVehicles) {
       try {
-        // Добавляем автомобиль (с флагом пропуска проверки дубликатов если база недавно очищена)
         const result = await vehicleService.addVehicle(
           vehicle.plate_number,
           vehicle.brand,
           vehicle.access_status,
           vehicle.pass_type,
           vehicle.expiry_date,
-          vehicle.notes,
-          skipDuplicateCheck
+          vehicle.notes
         );
 
         if (result) {
           stats.added++;
         } else {
-          // Если не удалось добавить и проверка дубликатов не пропущена - это дубликат
-          if (!skipDuplicateCheck) {
-            stats.skipped++;
-          } else {
-            stats.errors.push(`Строка ${vehicle.line_number}: Ошибка при добавлении в БД`);
-          }
+          stats.errors.push(`Строка ${vehicle.line_number}: Ошибка при добавлении в БД`);
         }
       } catch (error) {
         stats.errors.push(`Строка ${vehicle.line_number}: ${error.message}`);
@@ -186,10 +176,6 @@ class ImportService {
 
     if (importStats.skipped_in_file > 0) {
       report += `⚠️ Пропущено (дубликаты в файле): <b>${importStats.skipped_in_file}</b>\n`;
-    }
-
-    if (importStats.skipped > 0) {
-      report += `⚠️ Пропущено (уже в базе): <b>${importStats.skipped}</b>\n`;
     }
 
     const totalErrors = parseResult.errors.length + importStats.errors.length;
