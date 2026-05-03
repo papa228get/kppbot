@@ -118,6 +118,9 @@ class VehicleActionCallbackHandler {
     // Декодируем данные из callback
     const vehicleData = JSON.parse(Buffer.from(encodedData, 'base64').toString());
 
+    // Очищаем старое состояние add_vehicle_plate если оно есть
+    await this.stateManager.clearState(userId);
+
     // Устанавливаем состояние ожидания марки с данными в ключе
     await this.stateManager.setStateWithData(userId, 'awaiting_brand', vehicleData);
 
@@ -148,11 +151,17 @@ class VehicleActionCallbackHandler {
 
     if (passType === 'permanent') {
       // Для постоянного пропуска сразу переходим к заметкам
+      // Очищаем старое состояние awaiting_brand если оно есть
+      await this.stateManager.clearState(userId);
+
       await this.stateManager.setStateWithData(userId, 'awaiting_notes', fullData);
       const keyboard = KeyboardBuilder.buildNavigationButtons(true);
       await this.telegram.send(chatId, '📝 Введите заметки (или отправьте "-" чтобы пропустить):', keyboard);
     } else {
       // Для временного пропуска запрашиваем дату
+      // Очищаем старое состояние awaiting_brand если оно есть
+      await this.stateManager.clearState(userId);
+
       await this.stateManager.setStateWithData(userId, 'awaiting_expiry', fullData);
       const keyboard = KeyboardBuilder.buildNavigationButtons(true);
       await this.telegram.send(chatId, '📅 Введите дату окончания пропуска в формате ДД.ММ.ГГГГ (например: 31.12.2026):', keyboard);

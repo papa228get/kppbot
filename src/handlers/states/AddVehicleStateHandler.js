@@ -87,8 +87,8 @@ class AddVehicleStateHandler {
 
     await this.telegram.send(chatId, `✅ Номер принят: <b>${plateNumber}</b>\n\nНажмите "Продолжить" для ввода марки:`, keyboard);
 
-    // Очищаем состояние - данные теперь в callback кнопки
-    await this.stateManager.clearState(userId);
+    // НЕ очищаем состояние - оно будет очищено при нажатии кнопки
+    // await this.stateManager.clearState(userId);
   }
 
   /**
@@ -110,8 +110,9 @@ class AddVehicleStateHandler {
     const keyboard = KeyboardBuilder.buildPassTypeButtons(stateData.plate_number, brand);
     await this.telegram.send(chatId, '📋 Выберите тип пропуска:', keyboard);
 
-    // Очищаем состояние - данные теперь в callback кнопок
-    await this.stateManager.clearState(userId);
+    // НЕ очищаем состояние сразу - пусть истечет автоматически
+    // Это защищает от дубликатов сообщений от Telegram
+    // await this.stateManager.clearState(userId);
   }
 
   /**
