@@ -70,10 +70,13 @@ class AddVehicleStateHandler {
    * Шаг 2: Обработка марки автомобиля
    */
   async handleBrand(chatId, userId, text, userState) {
-    await this.stateManager.updateStateData(userId, 'brand', text);
-    // Автоматически устанавливаем статус "allowed" для всех новых авто
-    await this.stateManager.updateStateData(userId, 'access_status', 'allowed');
-    await this.stateManager.setState(userId, 'add_vehicle_pass_type', userState.data);
+    // Накапливаем данные локально вместо updateStateData
+    const updatedData = {
+      ...userState.data,
+      brand: text,
+      access_status: 'allowed'
+    };
+    await this.stateManager.setState(userId, 'add_vehicle_pass_type', updatedData);
 
     const keyboard = KeyboardBuilder.buildPassTypeButtons();
     await this.telegram.send(chatId, '📋 Выберите тип пропуска:', keyboard);
@@ -96,8 +99,12 @@ class AddVehicleStateHandler {
     const year = match[3];
     const expiryDate = `${year}-${month}-${day}`;
 
-    await this.stateManager.updateStateData(userId, 'expiry_date', expiryDate);
-    await this.stateManager.setState(userId, 'add_vehicle_notes', userState.data);
+    // Накапливаем данные локально вместо updateStateData
+    const updatedData = {
+      ...userState.data,
+      expiry_date: expiryDate
+    };
+    await this.stateManager.setState(userId, 'add_vehicle_notes', updatedData);
 
     const keyboard = KeyboardBuilder.buildNavigationButtons(true);
     await this.telegram.send(chatId, `✅ Дата окончания: <b>${expiryDate}</b>\n\nВведите дополнительные заметки или '-' чтобы пропустить:`, keyboard);

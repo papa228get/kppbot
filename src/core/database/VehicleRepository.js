@@ -120,7 +120,8 @@ class VehicleRepository {
       }
     }
 
-    return vehicles;
+    // Инвертируем порядок - последние добавленные первыми
+    return vehicles.reverse();
   }
 
   /**
@@ -128,12 +129,14 @@ class VehicleRepository {
    */
   async getVehiclesPaginated(page = 1, perPage = 5) {
     const allPlates = await this.indexManager.getIndex();
-    const total = allPlates.length;
+    // Инвертируем порядок - последние добавленные первыми
+    const reversedPlates = [...allPlates].reverse();
+    const total = reversedPlates.length;
     const totalPages = Math.ceil(total / perPage);
     const offset = (page - 1) * perPage;
 
     // Получаем номера для текущей страницы
-    const pagePlates = allPlates.slice(offset, offset + perPage);
+    const pagePlates = reversedPlates.slice(offset, offset + perPage);
 
     // Загружаем данные автомобилей
     const vehicles = [];
@@ -167,7 +170,8 @@ class VehicleRepository {
       }
     }
 
-    return vehicles;
+    // Инвертируем порядок - последние добавленные первыми
+    return vehicles.reverse();
   }
 
   /**
