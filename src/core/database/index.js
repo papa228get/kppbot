@@ -120,10 +120,9 @@ class Database {
    * Пересчитывает статистику на лету для мгновенного обновления
    */
   async getStatsRealtime() {
-    return await this.statsCalculator.calculateStatsOnTheFly(
-      async () => await this.indexManager.getIndexStrong(),
-      async (plate) => await this.vehicleRepository.findVehicle(plate)
-    );
+    // Получаем все автомобили напрямую (обходим кэш индекса)
+    const vehicles = await this.getAllVehicles();
+    return this.statsCalculator.calculateStats(vehicles);
   }
 
   // ==================== Приватные методы (для обратной совместимости) ====================
