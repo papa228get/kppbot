@@ -53,15 +53,88 @@ class CommandHandler {
   }
 
   /**
-   * Обработать команду /add - ОТКЛЮЧЕНО, используйте /import
+   * Обработать команду /add - добавление одной строкой
+   * Формат: /add Номер Марка Тип [Дата]
+   * Пример: /add А123БВ Лада Постоянный
+   * Пример: /add В456ГД КИА Временный 31.12.2026
    */
-  async handleAdd(chatId, userId, isAdmin) {
+  async handleAdd(chatId, userId, text, isAdmin) {
     if (!isAdmin) {
       await this.telegram.send(chatId, '❌ У вас нет прав для выполнения этой команды');
       return;
     }
 
-    await this.telegram.send(chatId, '❌ Добавление через /add отключено.\n\nИспользуйте /import для массового импорта автомобилей из файла.');
+    const parts = text.split(/\s+/).filter(p => p.length > 0);
+
+    if (parts.length < 4) {
+      const helpText = '📝 <b>Добавление автомобиля одной строкой</b>\n\n' +
+        '<b>Формат:</b>\n' +
+        '<code>/add Номер Марка Тип [Дата]</code>\n\n' +
+        '<b>Примеры:</b>\n' +
+        '<code>/add А123БВ Лада Постоянный</code>\n' +
+        '<code>/add В456ГД КИА Временный 31.12.2026</code>\n\n' +
+        '<b>Тип:</b> Постоянный или Временный\n' +
+        '<b>Дата:</b> обязательна для временных (ДД.ММ.ГГГГ)';
+
+      await this.telegram.send(chatId, helpText);
+      return;
+    }
+
+    // Парсим данные
+    const plateNumber = parts[1]; // /add [Номер] ...
+    const brand = parts[2];
+    const passTypeRaw = parts[3];
+    const expiryDateRaw = parts[4] || null;
+
+    // Определяем тип пропуска
+    let passType = 'permanent';
+    if (passTypeRaw.toLowerCase().includes('врем') || passTypeRaw.toLowerCase() === 'temporary') {
+      passType = 'temporary';
+    }
+
+    // Парсим дату для временных
+    let expiryDate = null;
+    if (passType === 'temporary') {
+      if (!expiryDateRaw) {
+        await this.telegram.send(chatId, '❌ Для временного пропуска укажите дату окончания\n\nПример: <code>/add В456ГД КИА Временный 31.12.2026</code>');
+        return;
+      }
+
+      const dateMatch = expiryDateRaw.match(/^(\d{2})\.(\d{2})\.(\d{4})$/);
+      if (!dateMatch) {
+        await this.telegram.send(chatId, '❌ Некорректный формат даты. Используйте ДД.ММ.ГГГГ\n\nПример: 31.12.2026');
+        return;
+      }
+
+      const day = dateMatch[1];
+      const month = dateMatch[2];
+      const year = dateMatch[3];
+      expiryDate = `${year}-${month}-${day}`;
+    }
+
+    // Добавляем автомобиль
+    try {
+      const result = await this.vehicleService.addVehicleWithCheck(
+        plateNumber,
+        brand,
+        'allowed',
+        passType,
+        expiryDate,
+        ''
+      );
+
+      if (result) {
+        const vehicle = await this.vehicleService.findVehicle(plateNumber);
+        const VehicleFormatter = require('../formatters/vehicleFormatter');
+        const cardData = VehicleFormatter.formatCard(vehicle, 'menu_back', true);
+        await this.telegram.send(chatId, '✅ <b>Автомобиль успешно добавлен!</b>\n\n' + cardData.text, cardData.keyboard);
+      } else {
+        await this.telegram.send(chatId, '❌ Автомобиль с таким номером уже существует');
+      }
+    } catch (error) {
+      console.error('Error in handleAdd:', error);
+      await this.telegram.send(chatId, '❌ Ошибка при добавлении автомобиля');
+    }
   }
 
 

@@ -81,7 +81,7 @@ class MenuCallbackHandler {
   }
 
   /**
-   * Обработать menu_add - ОТКЛЮЧЕНО
+   * Обработать menu_add - показать справку по добавлению
    */
   async handleMenuAdd(chatId, messageId, userId) {
     const PlateValidator = require('../../validators/plateValidator');
@@ -92,7 +92,22 @@ class MenuCallbackHandler {
       return;
     }
 
-    await this.telegram.edit(chatId, messageId, '❌ Добавление через меню отключено.\n\nИспользуйте /import для массового импорта автомобилей из файла.');
+    const helpText = '📝 <b>Добавление автомобиля одной строкой</b>\n\n' +
+      '<b>Формат:</b>\n' +
+      '<code>/add Номер Марка Тип [Дата]</code>\n\n' +
+      '<b>Примеры:</b>\n' +
+      '<code>/add А123БВ Лада Постоянный</code>\n' +
+      '<code>/add В456ГД КИА Временный 31.12.2026</code>\n\n' +
+      '<b>Тип:</b> Постоянный или Временный\n' +
+      '<b>Дата:</b> обязательна для временных (ДД.ММ.ГГГГ)';
+
+    const keyboard = {
+      inline_keyboard: [
+        [{ text: '⬅️ Назад', callback_data: 'menu_back' }]
+      ]
+    };
+
+    await this.telegram.edit(chatId, messageId, helpText, keyboard);
   }
 
 
