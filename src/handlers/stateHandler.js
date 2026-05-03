@@ -32,7 +32,8 @@ class StateHandler {
     // Обработка импорта файла
     if (state === 'awaiting_import_file') {
       if (message.document) {
-        await this.documentHandler.handleDocument(message);
+        const isAdmin = PlateValidator.isAdmin(userId);
+        await this.documentHandler.handleDocument(message, isAdmin);
         await this.stateManager.clearState(userId);
       } else {
         await this.telegram.send(chatId, '❌ Пожалуйста, отправьте файл');

@@ -11,7 +11,7 @@ class DocumentHandler {
   /**
    * Обработать загруженный документ
    */
-  async handleDocument(message) {
+  async handleDocument(message, isAdmin) {
     const chatId = message.chat.id;
     const document = message.document;
 
@@ -61,6 +61,11 @@ class DocumentHandler {
       const report = this.importService.formatImportReport(parseResult, importStats);
 
       await this.telegram.send(chatId, report);
+
+      // Отправляем главное меню
+      const KeyboardBuilder = require('../ui/keyboardBuilder');
+      const keyboard = KeyboardBuilder.buildMainMenu(isAdmin);
+      await this.telegram.send(chatId, 'Главное меню', keyboard);
     } catch (error) {
       console.error('Error handling document:', error);
       await this.telegram.send(chatId, '❌ Ошибка при обработке файла: ' + error.message);

@@ -158,6 +158,9 @@ class CommandHandler {
 
       if (allVehicles.length === 0) {
         await this.telegram.send(chatId, '📋 База данных уже пуста');
+        // Отправляем главное меню
+        const keyboard = KeyboardBuilder.buildMainMenu(isAdmin);
+        await this.telegram.send(chatId, 'Главное меню', keyboard);
         return;
       }
 
@@ -176,6 +179,10 @@ class CommandHandler {
       await this.vehicleService.clearAllData();
 
       await this.telegram.send(chatId, `🗑️ <b>База данных полностью очищена</b>\n\n✅ Удалено автомобилей: <b>${deleted}</b> из <b>${totalCount}</b>`);
+
+      // Отправляем главное меню
+      const keyboard = KeyboardBuilder.buildMainMenu(isAdmin);
+      await this.telegram.send(chatId, 'Главное меню', keyboard);
     } catch (error) {
       console.error('Error in handleFullDelete:', error);
       await this.telegram.send(chatId, '❌ Ошибка при очистке базы данных');
