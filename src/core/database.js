@@ -9,6 +9,9 @@ class Database {
     // Локальный кэш индекса для обхода eventual consistency
     this.indexCache = null;
     this.indexCacheTime = null;
+    // Локальный кэш статистики для обхода eventual consistency
+    this.statsCache = null;
+    this.statsCacheTime = null;
   }
 
   /**
@@ -99,6 +102,10 @@ class Database {
       data: stats,
       cached_at: new Date().toISOString()
     }));
+
+    // Обновляем локальный кэш статистики
+    this.statsCache = stats;
+    this.statsCacheTime = Date.now();
 
     return vehicles.length;
   }
@@ -343,7 +350,7 @@ class Database {
     // Очищаем индекс
     await store.delete('vehicles:index');
 
-    // Очищаем локальный кэш
+    // Очищаем локальный кэш индекса
     this.indexCache = [];
     this.indexCacheTime = Date.now();
 
@@ -361,6 +368,10 @@ class Database {
       cached_at: new Date().toISOString()
     }));
 
+    // Обновляем локальный кэш статистики
+    this.statsCache = stats;
+    this.statsCacheTime = Date.now();
+
     return true;
   }
 
@@ -368,15 +379,24 @@ class Database {
    * Получить статистику
    */
   async getStats() {
+    // Используем локальный кэш если он свежий (менее 30 секунд)
+    const now = Date.now();
+    if (this.statsCache && this.statsCacheTime && (now - this.statsCacheTime) < 30000) {
+      return this.statsCache;
+    }
+
     const store = this._getStore();
 
-    // Пробуем получить из кэша
+    // Пробуем получить из Blobs кэша
     const cachedStats = await store.get('vehicles:stats');
     if (cachedStats) {
       const stats = JSON.parse(cachedStats);
       // Проверяем, не устарел ли кэш (5 минут)
       const cacheAge = Date.now() - new Date(stats.cached_at).getTime();
       if (cacheAge < 5 * 60 * 1000) {
+        // Обновляем локальный кэш
+        this.statsCache = stats.data;
+        this.statsCacheTime = now;
         return stats.data;
       }
     }
@@ -392,11 +412,15 @@ class Database {
       temporary: vehicles.filter(v => v.pass_type === 'temporary').length
     };
 
-    // Сохраняем в кэш
+    // Сохраняем в Blobs кэш
     await store.set('vehicles:stats', JSON.stringify({
       data: stats,
       cached_at: new Date().toISOString()
     }));
+
+    // Обновляем локальный кэш
+    this.statsCache = stats;
+    this.statsCacheTime = now;
 
     return stats;
   }
@@ -468,6 +492,10 @@ class Database {
       data: stats,
       cached_at: new Date().toISOString()
     }));
+
+    // Обновляем локальный кэш статистики
+    this.statsCache = stats;
+    this.statsCacheTime = Date.now();
   }
 }
 
