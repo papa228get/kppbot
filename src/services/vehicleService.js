@@ -37,6 +37,10 @@ class VehicleService {
     return await this.db.getAllVehicles();
   }
 
+  async clearAllData() {
+    return await this.db.clearAllData();
+  }
+
   async getStats() {
     return await this.db.getStats();
   }

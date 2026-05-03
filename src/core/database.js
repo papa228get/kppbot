@@ -248,6 +248,21 @@ class Database {
   }
 
   /**
+   * Полная очистка всех данных (индекс, кэш, статистика)
+   */
+  async clearAllData() {
+    const store = this._getStore();
+
+    // Очищаем индекс
+    await store.delete('vehicles:index');
+
+    // Очищаем кэш статистики
+    await store.delete('vehicles:stats');
+
+    return true;
+  }
+
+  /**
    * Получить статистику
    */
   async getStats() {

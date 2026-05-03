@@ -161,6 +161,8 @@ class CommandHandler {
         return;
       }
 
+      const totalCount = allVehicles.length;
+
       // Удаляем все автомобили
       let deleted = 0;
       for (const vehicle of allVehicles) {
@@ -170,7 +172,10 @@ class CommandHandler {
         }
       }
 
-      await this.telegram.send(chatId, `🗑️ <b>База данных очищена</b>\n\n✅ Удалено автомобилей: <b>${deleted}</b>`);
+      // Принудительно очищаем индекс и кэш
+      await this.vehicleService.clearAllData();
+
+      await this.telegram.send(chatId, `🗑️ <b>База данных полностью очищена</b>\n\n✅ Удалено автомобилей: <b>${deleted}</b> из <b>${totalCount}</b>`);
     } catch (error) {
       console.error('Error in handleFullDelete:', error);
       await this.telegram.send(chatId, '❌ Ошибка при очистке базы данных');
