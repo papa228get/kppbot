@@ -391,9 +391,10 @@ class Database {
     const cachedStats = await store.get('vehicles:stats');
     if (cachedStats) {
       const stats = JSON.parse(cachedStats);
-      // Проверяем, не устарел ли кэш (5 минут)
+      // Проверяем, не устарел ли кэш (15 секунд вместо 5 минут)
+      // Короткий TTL позволяет eventual consistency синхронизироваться
       const cacheAge = Date.now() - new Date(stats.cached_at).getTime();
-      if (cacheAge < 5 * 60 * 1000) {
+      if (cacheAge < 15 * 1000) {
         // Обновляем локальный кэш
         this.statsCache = stats.data;
         this.statsCacheTime = now;
