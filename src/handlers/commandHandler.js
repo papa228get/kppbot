@@ -60,8 +60,9 @@ class CommandHandler {
       return;
     }
 
-    // Используем кэшированную статистику из Blobs
-    const stats = await this.vehicleService.getStats();
+    // Используем realtime статистику - всегда пересчитываем заново
+    // Это гарантирует актуальность, игнорируя eventual consistency Blobs
+    const stats = await this.vehicleService.getStatsRealtime();
     const text = StatsFormatter.format(stats);
     await this.telegram.send(chatId, text);
   }

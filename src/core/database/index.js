@@ -122,6 +122,9 @@ class Database {
   async getStatsRealtime() {
     // Получаем все автомобили через индекс (использует локальный кэш если доступен)
     const vehicles = await this.getAllVehicles();
+
+    // Пересчитываем статистику БЕЗ сохранения в Blobs
+    // Это гарантирует актуальность данных, игнорируя eventual consistency
     return this.statsCalculator.calculateStats(vehicles);
   }
 

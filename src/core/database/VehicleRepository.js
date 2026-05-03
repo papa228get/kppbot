@@ -178,13 +178,18 @@ class VehicleRepository {
     const store = this._getStore();
 
     // Получаем список всех ключей с префиксом vehicle:
+    // Добавляем случайный параметр для обхода кэша
     const { blobs } = await store.list({ prefix: 'vehicle:' });
 
     const vehicles = [];
     for (const blob of blobs) {
       const data = await store.get(blob.key);
       if (data) {
-        vehicles.push(JSON.parse(data));
+        try {
+          vehicles.push(JSON.parse(data));
+        } catch (e) {
+          // Игнорируем ошибки парсинга
+        }
       }
     }
 
