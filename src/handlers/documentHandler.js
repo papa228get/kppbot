@@ -2,10 +2,11 @@
  * DocumentHandler - обработка загруженных файлов
  */
 class DocumentHandler {
-  constructor(telegram, importService, vehicleService) {
+  constructor(telegram, importService, vehicleService, stateManager) {
     this.telegram = telegram;
     this.importService = importService;
     this.vehicleService = vehicleService;
+    this.stateManager = stateManager;
   }
 
   /**
@@ -13,6 +14,7 @@ class DocumentHandler {
    */
   async handleDocument(message, isAdmin) {
     const chatId = message.chat.id;
+    const userId = message.from.id;
     const document = message.document;
 
     // Проверяем тип файла
@@ -62,6 +64,9 @@ class DocumentHandler {
 
       await this.telegram.send(chatId, report);
 
+      // Очищаем состояние после успешного импорта
+      await this.stateManager.clearState(userId);
+
       // Отправляем главное меню
       const KeyboardBuilder = require('../ui/keyboardBuilder');
       const keyboard = KeyboardBuilder.buildMainMenu(isAdmin);
@@ -69,6 +74,9 @@ class DocumentHandler {
     } catch (error) {
       console.error('Error handling document:', error);
       await this.telegram.send(chatId, '❌ Ошибка при обработке файла: ' + error.message);
+
+      // Очищаем состояние даже при ошибке
+      await this.stateManager.clearState(userId);
     }
   }
 }

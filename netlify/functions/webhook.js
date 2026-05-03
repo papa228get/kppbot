@@ -47,7 +47,7 @@ exports.handler = async (event, context) => {
     const callbackHandler = new CallbackHandler(telegram, vehicleService, stateManager);
     const stateHandler = new StateHandler(telegram, vehicleService, stateManager);
     const messageHandler = new MessageHandler(telegram, accessChecker, stateManager);
-    const documentHandler = new DocumentHandler(telegram, importService, vehicleService);
+    const documentHandler = new DocumentHandler(telegram, importService, vehicleService, stateManager);
 
     // Связываем DocumentHandler с StateHandler для ImportStateHandler
     stateHandler.setDocumentHandler(documentHandler);

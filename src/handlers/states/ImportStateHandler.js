@@ -29,7 +29,7 @@ class ImportStateHandler {
       const PlateValidator = require('../../validators/plateValidator');
       const isAdmin = PlateValidator.isAdmin(userId);
       await this.documentHandler.handleDocument(message, isAdmin);
-      await this.stateManager.clearState(userId);
+      // DocumentHandler сам очищает состояние после обработки
     } else {
       await this.telegram.send(chatId, '❌ Пожалуйста, отправьте файл');
     }

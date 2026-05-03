@@ -113,16 +113,21 @@ class VehicleActionCallbackHandler {
 
     if (userState && userState.state === 'add_vehicle_pass_type') {
       const passType = data === 'pass_permanent' ? 'permanent' : 'temporary';
-      await this.stateManager.updateStateData(userId, 'pass_type', passType);
+
+      // Накапливаем данные локально, как в AddVehicleStateHandler
+      const updatedData = {
+        ...userState.data,
+        pass_type: passType
+      };
 
       if (passType === 'permanent') {
         // Для постоянного пропуска сразу переходим к заметкам
-        await this.stateManager.setState(userId, 'add_vehicle_notes', userState.data);
+        await this.stateManager.setState(userId, 'add_vehicle_notes', updatedData);
         const keyboard = KeyboardBuilder.buildNavigationButtons(true);
         await this.telegram.send(chatId, '📝 Введите заметки (или отправьте "-" чтобы пропустить):', keyboard);
       } else {
         // Для временного пропуска запрашиваем дату
-        await this.stateManager.setState(userId, 'add_vehicle_expiry', userState.data);
+        await this.stateManager.setState(userId, 'add_vehicle_expiry', updatedData);
         const keyboard = KeyboardBuilder.buildNavigationButtons(true);
         await this.telegram.send(chatId, '📅 Введите дату окончания пропуска в формате ДД.ММ.ГГГГ (например: 31.12.2026):', keyboard);
       }
