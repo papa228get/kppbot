@@ -90,8 +90,14 @@ class ImportService {
    * Конвертация даты из DD.MM.YYYY в YYYY-MM-DD
    */
   _convertDate(date) {
+    // Убираем "до", "г", "г." и лишние пробелы
+    let cleanDate = date
+      .replace(/^до\s*/i, '')  // Убираем "до" в начале
+      .replace(/г\.?$/i, '')    // Убираем "г" или "г." в конце
+      .trim();
+
     // Поддерживаем форматы: DD.MM.YYYY, DD-MM-YYYY, DD/MM/YYYY
-    const normalizedDate = date.replace(/[/-]/g, '.');
+    const normalizedDate = cleanDate.replace(/[/-]/g, '.');
 
     const match = normalizedDate.match(/^(\d{2})\.(\d{2})\.(\d{4})$/);
     if (!match) {
