@@ -70,16 +70,15 @@ class AddVehicleStateHandler {
    * Шаг 2: Обработка марки автомобиля
    */
   async handleBrand(chatId, userId, text, userState) {
-    // Накапливаем данные локально вместо updateStateData
-    const updatedData = {
-      ...userState.data,
-      brand: text,
-      access_status: 'allowed'
-    };
-    await this.stateManager.setState(userId, 'add_vehicle_pass_type', updatedData);
+    const plateNumber = userState.data.plate_number;
+    const brand = text;
 
-    const keyboard = KeyboardBuilder.buildPassTypeButtons();
+    // Отправляем кнопки с данными в callback_data
+    const keyboard = KeyboardBuilder.buildPassTypeButtons(plateNumber, brand);
     await this.telegram.send(chatId, '📋 Выберите тип пропуска:', keyboard);
+
+    // Очищаем состояние - данные теперь в callback
+    await this.stateManager.clearState(userId);
   }
 
   /**
