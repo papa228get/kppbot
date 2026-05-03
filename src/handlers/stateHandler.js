@@ -190,7 +190,7 @@ class StateHandler {
       const result = await this.vehicleService.updateVehicle(plateNumber, 'brand', newBrand);
 
       if (result) {
-        // Получаем обновленные данные и отправляем карточку
+        // Получаем обновленные данные
         const updatedVehicle = await this.vehicleService.findVehicle(plateNumber);
         const CardFormatter = require('../formatters/vehicle/cardFormatter');
         const cardData = CardFormatter.formatCard(updatedVehicle, 'list_back', true);
@@ -198,10 +198,9 @@ class StateHandler {
         const brandText = newBrand || 'не указана';
         let successText = '✅ <b>Марка изменена</b>\n\n';
         successText += `Новая марка: <b>${brandText}</b>\n\n`;
-        successText += 'Обновленная карточка автомобиля:';
+        successText += cardData.text;
 
-        await this.telegram.send(chatId, successText);
-        await this.telegram.send(chatId, cardData.text, cardData.keyboard);
+        await this.telegram.send(chatId, successText, cardData.keyboard);
       } else {
         await this.telegram.send(chatId, '❌ Ошибка при изменении марки');
       }
@@ -226,7 +225,7 @@ class StateHandler {
       await this.vehicleService.updateVehicle(plateNumber, 'pass_type', newType);
       await this.vehicleService.updateVehicle(plateNumber, 'expiry_date', expiryDate);
 
-      // Получаем обновленные данные и отправляем карточку
+      // Получаем обновленные данные
       const updatedVehicle = await this.vehicleService.findVehicle(plateNumber);
       const CardFormatter = require('../formatters/vehicle/cardFormatter');
       const cardData = CardFormatter.formatCard(updatedVehicle, 'list_back', true);
@@ -234,10 +233,9 @@ class StateHandler {
       let successText = '✅ <b>Тип пропуска изменен</b>\n\n';
       successText += 'Новый тип: <b>⏳ Временный</b>\n';
       successText += `Действует до: <b>${expiryDate}</b>\n\n`;
-      successText += 'Обновленная карточка автомобиля:';
+      successText += cardData.text;
 
-      await this.telegram.send(chatId, successText);
-      await this.telegram.send(chatId, cardData.text, cardData.keyboard);
+      await this.telegram.send(chatId, successText, cardData.keyboard);
 
       await this.stateManager.clearState(userId);
       return;
@@ -251,7 +249,7 @@ class StateHandler {
       const result = await this.vehicleService.updateVehicle(plateNumber, 'notes', newNotes);
 
       if (result) {
-        // Получаем обновленные данные и отправляем карточку
+        // Получаем обновленные данные
         const updatedVehicle = await this.vehicleService.findVehicle(plateNumber);
         const CardFormatter = require('../formatters/vehicle/cardFormatter');
         const cardData = CardFormatter.formatCard(updatedVehicle, 'list_back', true);
@@ -259,10 +257,9 @@ class StateHandler {
         const notesText = newNotes || 'не указаны';
         let successText = '✅ <b>Заметка изменена</b>\n\n';
         successText += `Новая заметка: <b>${notesText}</b>\n\n`;
-        successText += 'Обновленная карточка автомобиля:';
+        successText += cardData.text;
 
-        await this.telegram.send(chatId, successText);
-        await this.telegram.send(chatId, cardData.text, cardData.keyboard);
+        await this.telegram.send(chatId, successText, cardData.keyboard);
       } else {
         await this.telegram.send(chatId, '❌ Ошибка при изменении заметки');
       }

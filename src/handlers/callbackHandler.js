@@ -58,7 +58,17 @@ class CallbackHandler {
 
     if (data === 'menu_stats') {
       const StatsFormatter = require('../formatters/statsFormatter');
-      const stats = await this.vehicleService.getStats();
+
+      // Принудительно пересчитываем статистику (обход кэша)
+      const allVehicles = await this.vehicleService.getAllVehicles();
+      const stats = {
+        total: allVehicles.length,
+        allowed: allVehicles.filter(v => v.access_status === 'allowed').length,
+        denied: allVehicles.filter(v => v.access_status === 'denied').length,
+        permanent: allVehicles.filter(v => v.pass_type === 'permanent').length,
+        temporary: allVehicles.filter(v => v.pass_type === 'temporary').length
+      };
+
       const text = StatsFormatter.format(stats);
       const keyboard = {
         inline_keyboard: [
@@ -206,10 +216,40 @@ class CallbackHandler {
 
     if (data.startsWith('delete_vehicle:')) {
       const plateNumber = data.split(':')[1];
+
+      // Добавляем подтверждение удаления
+      const vehicle = await this.vehicleService.findVehicle(plateNumber);
+      if (!vehicle) {
+        await this.telegram.answerCallback(callbackQuery.id, '❌ Автомобиль не найден', true);
+        return;
+      }
+
+      const confirmKeyboard = {
+        inline_keyboard: [
+          [
+            { text: '✅ Да, удалить', callback_data: `confirm_delete:${plateNumber}` },
+            { text: '❌ Отмена', callback_data: `view_vehicle:${plateNumber}` }
+          ]
+        ]
+      };
+
+      const confirmText = `⚠️ <b>Подтверждение удаления</b>\n\nВы действительно хотите удалить автомобиль?\n\n🚗 <b>${vehicle.plate_number}</b>\n🏷 ${vehicle.brand || 'Марка не указана'}`;
+
+      await this.telegram.edit(chatId, messageId, confirmText, confirmKeyboard);
+      await this.telegram.answerCallback(callbackQuery.id);
+      return;
+    }
+
+    if (data.startsWith('confirm_delete:')) {
+      const plateNumber = data.split(':')[1];
       await this.vehicleService.removeVehicle(plateNumber);
+
+      // Инвалидируем кэш статистики
+      await this.vehicleService.db._invalidateStatsCache();
+
       await this.telegram.answerCallback(callbackQuery.id, '✅ Автомобиль удален', false);
 
-      // Возвращаемся к списку
+      // Возвращаемся к обновленному списку
       const VehicleFormatter = require('../formatters/vehicleFormatter');
       const paginationData = await this.vehicleService.getVehiclesList(1, 5);
       const listData = VehicleFormatter.formatInteractiveList(paginationData);
@@ -345,9 +385,11 @@ class CallbackHandler {
         const CardFormatter = require('../formatters/vehicle/cardFormatter');
         const cardData = CardFormatter.formatCard(updatedVehicle, 'list_back', true);
 
-        const successText = '✅ <b>Тип пропуска изменен</b>\n\nНовый тип: <b>🔄 Постоянный</b>\n\nОбновленная карточка автомобиля:';
-        await this.telegram.send(chatId, successText);
-        await this.telegram.send(chatId, cardData.text, cardData.keyboard);
+        let successText = '✅ <b>Тип пропуска изменен</b>\n\n';
+        successText += 'Новый тип: <b>🔄 Постоянный</b>\n\n';
+        successText += cardData.text;
+
+        await this.telegram.send(chatId, successText, cardData.keyboard);
         await this.stateManager.clearState(userId);
       } else {
         // Для временного пропуска запрашиваем дату
