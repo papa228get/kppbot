@@ -81,7 +81,7 @@ class MenuCallbackHandler {
   }
 
   /**
-   * Обработать menu_add - показать справку по добавлению
+   * Обработать menu_add - начать ожидание данных
    */
   async handleMenuAdd(chatId, messageId, userId) {
     const PlateValidator = require('../../validators/plateValidator');
@@ -92,21 +92,19 @@ class MenuCallbackHandler {
       return;
     }
 
-    const helpText = '📝 <b>Добавление автомобиля одной строкой</b>\n\n' +
-      '<b>Формат:</b>\n' +
-      '<code>/add Номер Марка Тип [Дата]</code>\n\n' +
+    // Устанавливаем состояние ожидания данных
+    await this.stateManager.setState(userId, 'awaiting_add_oneline', {});
+
+    const helpText = '📝 <b>Добавление автомобиля</b>\n\n' +
+      'Отправьте данные в одном сообщении:\n' +
+      '<code>Номер Марка Тип [Дата]</code>\n\n' +
       '<b>Примеры:</b>\n' +
-      '<code>/add А123БВ Лада Постоянный</code>\n' +
-      '<code>/add В456ГД КИА Временный 31.12.2026</code>\n\n' +
+      '<code>А123БВ Лада Постоянный</code>\n' +
+      '<code>В456ГД КИА Временный 31.12.2026</code>\n\n' +
       '<b>Тип:</b> Постоянный или Временный\n' +
       '<b>Дата:</b> обязательна для временных (ДД.ММ.ГГГГ)';
 
-    const keyboard = {
-      inline_keyboard: [
-        [{ text: '⬅️ Назад', callback_data: 'menu_back' }]
-      ]
-    };
-
+    const keyboard = KeyboardBuilder.buildNavigationButtons(false);
     await this.telegram.edit(chatId, messageId, helpText, keyboard);
   }
 
