@@ -4,9 +4,16 @@ const CardFormatter = require('../../formatters/vehicle/cardFormatter');
 
 /**
  * AddVehicleStateHandler - обработка состояний добавления автомобиля
- * Обрабатывает 5 шагов: plate -> brand -> pass_type -> expiry (для временных) -> notes
  *
- * ВАЖНО: Использует передачу данных через callback_data для избежания проблем с eventual consistency
+ * НОВАЯ АРХИТЕКТУРА: Данные передаются через callback_data и хранятся в ключе состояния,
+ * а не в Netlify Blobs. Это решает проблему eventual consistency.
+ *
+ * Шаги:
+ * 1. plate -> кнопка "Продолжить" с данными
+ * 2. brand -> кнопки выбора типа с данными
+ * 3. pass_type -> состояние с данными в ключе
+ * 4. expiry (для временных) -> состояние с данными в ключе
+ * 5. notes -> сохранение в БД
  */
 class AddVehicleStateHandler {
   constructor(telegram, vehicleService, stateManager) {
@@ -19,7 +26,10 @@ class AddVehicleStateHandler {
    * Проверить, может ли этот обработчик обработать состояние
    */
   canHandle(state) {
-    return state.startsWith('add_vehicle_');
+    return state.startsWith('add_vehicle_') ||
+           state.startsWith('awaiting_brand:') ||
+           state.startsWith('awaiting_expiry:') ||
+           state.startsWith('awaiting_notes:');
   }
 
   /**
@@ -33,11 +43,11 @@ class AddVehicleStateHandler {
 
     if (state === 'add_vehicle_plate') {
       await this.handlePlate(chatId, userId, text);
-    } else if (state === 'add_vehicle_brand') {
+    } else if (state.startsWith('awaiting_brand:')) {
       await this.handleBrand(chatId, userId, text, userState);
-    } else if (state === 'add_vehicle_expiry') {
+    } else if (state.startsWith('awaiting_expiry:')) {
       await this.handleExpiry(chatId, userId, text, userState);
-    } else if (state === 'add_vehicle_notes') {
+    } else if (state.startsWith('awaiting_notes:')) {
       await this.handleNotes(chatId, userId, text, userState);
     }
   }
@@ -61,24 +71,46 @@ class AddVehicleStateHandler {
       return;
     }
 
-    // Переходим к вводу марки
-    await this.stateManager.setState(userId, 'add_vehicle_brand', { plate_number: plateNumber });
-    const keyboard = KeyboardBuilder.buildNavigationButtons(true);
-    await this.telegram.send(chatId, '🏷 Введите марку автомобиля:', keyboard);
+    // Кодируем данные и отправляем кнопку "Продолжить"
+    const data = { plate_number: plateNumber };
+    const encoded = Buffer.from(JSON.stringify(data)).toString('base64');
+    const keyboard = {
+      inline_keyboard: [
+        [
+          { text: '➡️ Продолжить', callback_data: `continue_add:${encoded}` }
+        ],
+        [
+          { text: '❌ Отмена', callback_data: 'nav_cancel' }
+        ]
+      ]
+    };
+
+    await this.telegram.send(chatId, `✅ Номер принят: <b>${plateNumber}</b>\n\nНажмите "Продолжить" для ввода марки:`, keyboard);
+
+    // Очищаем состояние - данные теперь в callback кнопки
+    await this.stateManager.clearState(userId);
   }
 
   /**
    * Шаг 2: Обработка марки автомобиля
    */
   async handleBrand(chatId, userId, text, userState) {
-    const plateNumber = userState.data.plate_number;
+    // Извлекаем данные из ключа состояния
+    const stateData = this.stateManager.extractDataFromState(userState.state);
+
+    if (!stateData || !stateData.plate_number) {
+      await this.telegram.send(chatId, '❌ Ошибка: данные потеряны. Начните заново с /add');
+      await this.stateManager.clearState(userId);
+      return;
+    }
+
     const brand = text.trim();
 
-    // Отправляем кнопки с данными в callback_data
-    const keyboard = KeyboardBuilder.buildPassTypeButtons(plateNumber, brand);
+    // Отправляем кнопки выбора типа пропуска с данными
+    const keyboard = KeyboardBuilder.buildPassTypeButtons(stateData.plate_number, brand);
     await this.telegram.send(chatId, '📋 Выберите тип пропуска:', keyboard);
 
-    // Очищаем состояние - данные теперь в callback
+    // Очищаем состояние - данные теперь в callback кнопок
     await this.stateManager.clearState(userId);
   }
 
@@ -99,16 +131,23 @@ class AddVehicleStateHandler {
     const year = match[3];
     const expiryDate = `${year}-${month}-${day}`;
 
-    // Сохраняем ВСЕ данные в новое состояние (не обновляем старое!)
-    const newStateData = {
-      plate_number: userState.data.plate_number,
-      brand: userState.data.brand,
-      access_status: userState.data.access_status,
-      pass_type: userState.data.pass_type,
+    // Извлекаем данные из ключа состояния
+    const stateData = this.stateManager.extractDataFromState(userState.state);
+
+    if (!stateData || !stateData.plate_number) {
+      await this.telegram.send(chatId, '❌ Ошибка: данные потеряны. Начните заново с /add');
+      await this.stateManager.clearState(userId);
+      return;
+    }
+
+    // Добавляем дату к данным
+    const newData = {
+      ...stateData,
       expiry_date: expiryDate
     };
 
-    await this.stateManager.setState(userId, 'add_vehicle_notes', newStateData);
+    // Устанавливаем состояние ожидания заметок с данными в ключе
+    await this.stateManager.setStateWithData(userId, 'awaiting_notes', newData);
 
     const keyboard = KeyboardBuilder.buildNavigationButtons(true);
     await this.telegram.send(chatId, `✅ Дата окончания: <b>${expiryDate}</b>\n\nВведите дополнительные заметки или '-' чтобы пропустить:`, keyboard);
@@ -120,25 +159,34 @@ class AddVehicleStateHandler {
   async handleNotes(chatId, userId, text, userState) {
     const notes = text === '-' ? '' : text.trim();
 
-    const data = userState.data;
+    // Извлекаем данные из ключа состояния
+    const stateData = this.stateManager.extractDataFromState(userState.state);
+
+    if (!stateData || !stateData.plate_number) {
+      await this.telegram.send(chatId, '❌ Ошибка: данные потеряны. Начните заново с /add');
+      await this.stateManager.clearState(userId);
+      return;
+    }
+
+    // Сохраняем автомобиль в БД
     const result = await this.vehicleService.addVehicle(
-      data.plate_number,
-      data.brand,
-      data.access_status,
-      data.pass_type,
-      data.expiry_date || null,
+      stateData.plate_number,
+      stateData.brand,
+      stateData.access_status,
+      stateData.pass_type,
+      stateData.expiry_date || null,
       notes
     );
 
     if (result) {
       // Получаем добавленный автомобиль и отправляем полную карточку
-      const vehicle = await this.vehicleService.findVehicle(data.plate_number);
+      const vehicle = await this.vehicleService.findVehicle(stateData.plate_number);
 
       if (vehicle) {
         const cardData = CardFormatter.formatCard(vehicle, 'list_back', true);
         await this.telegram.send(chatId, '✅ <b>Автомобиль успешно добавлен!</b>\n\n' + cardData.text, cardData.keyboard);
       } else {
-        await this.telegram.send(chatId, `✅ Автомобиль ${data.plate_number} успешно добавлен!`);
+        await this.telegram.send(chatId, `✅ Автомобиль ${stateData.plate_number} успешно добавлен!`);
       }
     } else {
       await this.telegram.send(chatId, '❌ Ошибка при добавлении автомобиля');

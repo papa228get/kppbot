@@ -110,6 +110,45 @@ class StateManager {
     // Альтернативный подход: можно вести индекс состояний,
     // но для простоты используем проверку при чтении
   }
+
+  /**
+   * Установить состояние с данными в самом ключе (для избежания eventual consistency)
+   * Вместо хранения данных в Blobs, кодируем их в ключ состояния
+   */
+  async setStateWithData(userId, state, data) {
+    const encoded = Buffer.from(JSON.stringify(data)).toString('base64');
+    const stateKey = `${state}:${encoded}`;
+
+    console.log(`[StateManager] Setting state with data for user ${userId}:`, state);
+
+    // Сохраняем минимальный флаг в Blobs, данные в ключе
+    await this.setState(userId, stateKey, {});
+  }
+
+  /**
+   * Извлечь данные из ключа состояния
+   * Возвращает декодированные данные или null
+   */
+  extractDataFromState(stateKey) {
+    if (!stateKey || !stateKey.includes(':')) {
+      return null;
+    }
+
+    const parts = stateKey.split(':');
+    if (parts.length < 2) return null;
+
+    // Берем все части после первого : (на случай если в данных есть :)
+    const encoded = parts.slice(1).join(':');
+
+    try {
+      const decoded = JSON.parse(Buffer.from(encoded, 'base64').toString());
+      console.log(`[StateManager] Extracted data from state:`, decoded);
+      return decoded;
+    } catch (e) {
+      console.error(`[StateManager] Failed to extract data from state:`, e.message);
+      return null;
+    }
+  }
 }
 
 module.exports = StateManager;

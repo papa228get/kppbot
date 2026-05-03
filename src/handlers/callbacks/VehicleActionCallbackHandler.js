@@ -20,7 +20,8 @@ class VehicleActionCallbackHandler {
            data.startsWith('delete_vehicle:') ||
            data.startsWith('confirm_delete:') ||
            data.startsWith('pass_permanent:') ||
-           data.startsWith('pass_temporary:');
+           data.startsWith('pass_temporary:') ||
+           data.startsWith('continue_add:');
   }
 
   /**
@@ -41,6 +42,8 @@ class VehicleActionCallbackHandler {
       return; // Не вызываем answerCallback в конце, т.к. уже вызвали
     } else if (data.startsWith('pass_permanent:') || data.startsWith('pass_temporary:')) {
       await this.handlePassType(data, chatId, userId);
+    } else if (data.startsWith('continue_add:')) {
+      await this.handleContinueAdd(data, chatId, userId);
     }
 
     await this.telegram.answerCallback(callbackQuery.id);
@@ -106,8 +109,25 @@ class VehicleActionCallbackHandler {
   }
 
   /**
+   * Обработать continue_add - продолжить добавление после ввода номера
+   */
+  async handleContinueAdd(data, chatId, userId) {
+    const parts = data.split(':');
+    const encodedData = parts[1];
+
+    // Декодируем данные из callback
+    const vehicleData = JSON.parse(Buffer.from(encodedData, 'base64').toString());
+
+    // Устанавливаем состояние ожидания марки с данными в ключе
+    await this.stateManager.setStateWithData(userId, 'awaiting_brand', vehicleData);
+
+    const keyboard = KeyboardBuilder.buildNavigationButtons(true);
+    await this.telegram.send(chatId, '🏷 Введите марку автомобиля:', keyboard);
+  }
+
+  /**
    * Обработать pass_permanent/pass_temporary - выбор типа пропуска при добавлении
-   * Данные передаются через callback_data для избежания eventual consistency
+   * Данные передаются через callback_data, устанавливаем состояние с данными в ключе
    */
   async handlePassType(data, chatId, userId) {
     // Извлекаем тип пропуска и данные из callback
@@ -118,26 +138,22 @@ class VehicleActionCallbackHandler {
     // Декодируем данные из base64
     const vehicleData = JSON.parse(Buffer.from(encodedData, 'base64').toString());
 
+    // Добавляем информацию о типе пропуска и статусе
+    const fullData = {
+      plate_number: vehicleData.plate_number,
+      brand: vehicleData.brand,
+      access_status: 'allowed',
+      pass_type: passType
+    };
+
     if (passType === 'permanent') {
       // Для постоянного пропуска сразу переходим к заметкам
-      // Сохраняем ВСЕ данные в состояние одним вызовом
-      await this.stateManager.setState(userId, 'add_vehicle_notes', {
-        plate_number: vehicleData.plate_number,
-        brand: vehicleData.brand,
-        access_status: 'allowed',
-        pass_type: 'permanent'
-      });
+      await this.stateManager.setStateWithData(userId, 'awaiting_notes', fullData);
       const keyboard = KeyboardBuilder.buildNavigationButtons(true);
       await this.telegram.send(chatId, '📝 Введите заметки (или отправьте "-" чтобы пропустить):', keyboard);
     } else {
       // Для временного пропуска запрашиваем дату
-      // Сохраняем ВСЕ данные в состояние одним вызовом
-      await this.stateManager.setState(userId, 'add_vehicle_expiry', {
-        plate_number: vehicleData.plate_number,
-        brand: vehicleData.brand,
-        access_status: 'allowed',
-        pass_type: 'temporary'
-      });
+      await this.stateManager.setStateWithData(userId, 'awaiting_expiry', fullData);
       const keyboard = KeyboardBuilder.buildNavigationButtons(true);
       await this.telegram.send(chatId, '📅 Введите дату окончания пропуска в формате ДД.ММ.ГГГГ (например: 31.12.2026):', keyboard);
     }
