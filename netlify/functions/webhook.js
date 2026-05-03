@@ -30,7 +30,9 @@ exports.handler = async (event, context) => {
     console.log('Received update:', JSON.stringify(update, null, 2));
 
     // Инициализация зависимостей
+    console.log('Initializing database...');
     const db = new Database(getStore);
+    console.log('Initializing state manager...');
     const stateManager = new StateManager(getStore);
     const telegram = new TelegramApi(process.env.BOT_TOKEN);
     const vehicleService = new VehicleService(db);
@@ -68,11 +70,14 @@ exports.handler = async (event, context) => {
 
       // Команды /start и /cancel - они должны работать всегда
       if (text === '/start') {
+        console.log('Processing /start command for user:', userId);
         if (userState && userState.state) {
           await telegram.send(chatId, '❌ Предыдущая операция отменена');
         }
         await stateManager.clearState(userId);
+        console.log('Calling handleStart...');
         await commandHandler.handleStart(chatId, isAdmin);
+        console.log('/start command completed');
         return {
           statusCode: 200,
           body: JSON.stringify({ ok: true })
