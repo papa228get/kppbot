@@ -98,9 +98,10 @@ class VehicleActionCallbackHandler {
 
     await this.telegram.answerCallback(callbackId, '✅ Автомобиль удален', false);
 
-    // Возвращаемся к обновленному списку
+    // Возвращаемся к обновленному списку со статистикой
     const paginationData = await this.vehicleService.getVehiclesList(1, 5);
-    const listData = VehicleFormatter.formatInteractiveList(paginationData);
+    const stats = await this.vehicleService.getStatsRealtime();
+    const listData = VehicleFormatter.formatInteractiveListWithStats(paginationData, stats);
     await this.telegram.edit(chatId, messageId, listData.text, listData.keyboard);
   }
 

@@ -46,11 +46,8 @@ class NavigationCallbackHandler {
     if (userState && userState.state === 'list_search') {
       await this.stateManager.clearState(userId);
       const paginationData = await this.vehicleService.getVehiclesList(1, 5);
-      const listData = VehicleFormatter.formatInteractiveList(paginationData);
-      // Добавляем кнопку "Назад" в главное меню
-      if (listData.keyboard) {
-        listData.keyboard.inline_keyboard.push([{ text: '⬅️ Назад', callback_data: 'menu_back' }]);
-      }
+      const stats = await this.vehicleService.getStatsRealtime();
+      const listData = VehicleFormatter.formatInteractiveListWithStats(paginationData, stats);
       await this.telegram.edit(chatId, messageId, listData.text, listData.keyboard);
       return;
     }
