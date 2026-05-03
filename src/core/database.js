@@ -6,6 +6,9 @@ class Database {
   constructor(getStore) {
     this.getStore = getStore;
     this.storeName = 'kppbot';
+    // Локальный кэш индекса для обхода eventual consistency
+    this.indexCache = null;
+    this.indexCacheTime = null;
   }
 
   /**
@@ -70,6 +73,10 @@ class Database {
 
     const newIndex = [...platesSet];
     await store.set('vehicles:index', JSON.stringify(newIndex));
+
+    // Обновляем локальный кэш
+    this.indexCache = newIndex;
+    this.indexCacheTime = Date.now();
 
     // Пересчитываем статистику по ВСЕМ автомобилям из нового индекса
     const allVehicles = [];
@@ -164,9 +171,19 @@ class Database {
   async getVehiclesPaginated(page = 1, perPage = 5) {
     const store = this._getStore();
 
-    // Получаем индекс
-    const indexData = await store.get('vehicles:index');
-    const allPlates = indexData ? JSON.parse(indexData) : [];
+    // Используем кэш индекса если он свежий (менее 30 секунд)
+    let allPlates;
+    const now = Date.now();
+    if (this.indexCache && this.indexCacheTime && (now - this.indexCacheTime) < 30000) {
+      allPlates = this.indexCache;
+    } else {
+      // Получаем индекс из Blobs
+      const indexData = await store.get('vehicles:index');
+      allPlates = indexData ? JSON.parse(indexData) : [];
+      // Обновляем кэш
+      this.indexCache = allPlates;
+      this.indexCacheTime = now;
+    }
 
     const total = allPlates.length;
     const totalPages = Math.ceil(total / perPage);
@@ -326,6 +343,10 @@ class Database {
     // Очищаем индекс
     await store.delete('vehicles:index');
 
+    // Очищаем локальный кэш
+    this.indexCache = [];
+    this.indexCacheTime = Date.now();
+
     // Пересчитываем статистику (будет 0 по всем полям)
     const stats = {
       total: 0,
@@ -402,6 +423,10 @@ class Database {
 
     // Сохраняем обновленный индекс
     await store.set('vehicles:index', JSON.stringify(allPlates));
+
+    // Обновляем локальный кэш
+    this.indexCache = allPlates;
+    this.indexCacheTime = Date.now();
   }
 
   /**
