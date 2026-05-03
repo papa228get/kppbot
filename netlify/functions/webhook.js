@@ -31,9 +31,11 @@ exports.handler = async (event, context) => {
 
     // Инициализация зависимостей
     console.log('Initializing database...');
-    const db = new Database(getStore);
+    // Передаем context для доступа к Netlify Blobs
+    const getStoreWithContext = (options) => getStore({ ...options, context });
+    const db = new Database(getStoreWithContext);
     console.log('Initializing state manager...');
-    const stateManager = new StateManager(getStore);
+    const stateManager = new StateManager(getStoreWithContext);
     const telegram = new TelegramApi(process.env.BOT_TOKEN);
     const vehicleService = new VehicleService(db);
     const accessChecker = new AccessChecker(db);
