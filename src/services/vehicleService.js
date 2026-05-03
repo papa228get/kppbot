@@ -9,9 +9,9 @@ class VehicleService {
     this.db = db;
   }
 
-  async addVehicle(plateNumber, brand, accessStatus, passType, expiryDate, notes) {
+  async addVehicle(plateNumber, brand, accessStatus, passType, expiryDate, notes, skipDuplicateCheck = false) {
     const normalizedPlate = PlateValidator.normalize(plateNumber);
-    return await this.db.addVehicle(normalizedPlate, brand, accessStatus, passType, expiryDate, notes);
+    return await this.db.addVehicle(normalizedPlate, brand, accessStatus, passType, expiryDate, notes, skipDuplicateCheck);
   }
 
   async removeVehicle(plateNumber) {

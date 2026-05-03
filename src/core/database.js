@@ -17,14 +17,17 @@ class Database {
 
   /**
    * Добавить автомобиль
+   * @param {boolean} skipDuplicateCheck - пропустить проверку на дубликаты (для обхода eventual consistency)
    */
-  async addVehicle(plateNumber, brand, accessStatus, passType, expiryDate, notes) {
+  async addVehicle(plateNumber, brand, accessStatus, passType, expiryDate, notes, skipDuplicateCheck = false) {
     const store = this._getStore();
 
-    // Проверяем существование
-    const existing = await this.findVehicle(plateNumber);
-    if (existing) {
-      return false;
+    // Проверяем существование (если не пропускаем проверку)
+    if (!skipDuplicateCheck) {
+      const existing = await this.findVehicle(plateNumber);
+      if (existing) {
+        return false;
+      }
     }
 
     const vehicle = {

@@ -147,30 +147,26 @@ class ImportService {
     // Импортируем уникальные автомобили
     for (const vehicle of uniqueVehicles) {
       try {
-        // Проверяем существование автомобиля в базе только если база не была недавно очищена
-        if (!skipDuplicateCheck) {
-          const existing = await vehicleService.findVehicle(vehicle.plate_number);
-
-          if (existing) {
-            stats.skipped++;
-            continue;
-          }
-        }
-
-        // Добавляем автомобиль
+        // Добавляем автомобиль (с флагом пропуска проверки дубликатов если база недавно очищена)
         const result = await vehicleService.addVehicle(
           vehicle.plate_number,
           vehicle.brand,
           vehicle.access_status,
           vehicle.pass_type,
           vehicle.expiry_date,
-          vehicle.notes
+          vehicle.notes,
+          skipDuplicateCheck
         );
 
         if (result) {
           stats.added++;
         } else {
-          stats.errors.push(`Строка ${vehicle.line_number}: Ошибка при добавлении в БД`);
+          // Если не удалось добавить и проверка дубликатов не пропущена - это дубликат
+          if (!skipDuplicateCheck) {
+            stats.skipped++;
+          } else {
+            stats.errors.push(`Строка ${vehicle.line_number}: Ошибка при добавлении в БД`);
+          }
         }
       } catch (error) {
         stats.errors.push(`Строка ${vehicle.line_number}: ${error.message}`);
