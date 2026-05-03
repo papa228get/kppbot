@@ -153,34 +153,18 @@ class CommandHandler {
     }
 
     try {
-      // Получаем все автомобили
+      // Получаем количество автомобилей до удаления
       const allVehicles = await this.vehicleService.getAllVehicles();
-
-      if (allVehicles.length === 0) {
-        // Принудительно очищаем индекс и кэш даже если база пуста
-        await this.vehicleService.clearAllData();
-        await this.telegram.send(chatId, '📋 База данных уже пуста');
-        // Отправляем главное меню
-        const keyboard = KeyboardBuilder.buildMainMenu(isAdmin);
-        await this.telegram.send(chatId, 'Главное меню', keyboard);
-        return;
-      }
-
       const totalCount = allVehicles.length;
 
-      // Удаляем все автомобили
-      let deleted = 0;
-      for (const vehicle of allVehicles) {
-        const result = await this.vehicleService.removeVehicle(vehicle.plate_number);
-        if (result) {
-          deleted++;
-        }
-      }
-
-      // Принудительно очищаем индекс и кэш
+      // Полная очистка: удаляем все записи автомобилей, индекс и кэш
       await this.vehicleService.clearAllData();
 
-      await this.telegram.send(chatId, `🗑️ <b>База данных полностью очищена</b>\n\n✅ Удалено автомобилей: <b>${deleted}</b> из <b>${totalCount}</b>`);
+      if (totalCount === 0) {
+        await this.telegram.send(chatId, '📋 База данных уже была пуста\n\n✅ Индекс и кэш очищены');
+      } else {
+        await this.telegram.send(chatId, `🗑️ <b>База данных полностью очищена</b>\n\n✅ Удалено автомобилей: <b>${totalCount}</b>`);
+      }
 
       // Отправляем главное меню
       const keyboard = KeyboardBuilder.buildMainMenu(isAdmin);

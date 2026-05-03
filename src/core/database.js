@@ -248,10 +248,19 @@ class Database {
   }
 
   /**
-   * Полная очистка всех данных (индекс, кэш, статистика)
+   * Полная очистка всех данных (индекс, кэш, статистика, все автомобили)
    */
   async clearAllData() {
     const store = this._getStore();
+
+    // Получаем список всех номеров из индекса
+    const indexData = await store.get('vehicles:index');
+    const allPlates = indexData ? JSON.parse(indexData) : [];
+
+    // Удаляем все записи автомобилей
+    for (const plate of allPlates) {
+      await store.delete(`vehicle:${plate}`);
+    }
 
     // Очищаем индекс
     await store.delete('vehicles:index');
