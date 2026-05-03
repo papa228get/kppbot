@@ -124,12 +124,27 @@ class ImportService {
     const stats = {
       added: 0,
       skipped: 0,
+      skipped_in_file: 0,
       errors: []
     };
 
+    // Удаляем дубликаты внутри файла (оставляем только первое вхождение)
+    const seenPlates = new Set();
+    const uniqueVehicles = [];
+
     for (const vehicle of vehicles) {
+      if (seenPlates.has(vehicle.plate_number)) {
+        stats.skipped_in_file++;
+        continue;
+      }
+      seenPlates.add(vehicle.plate_number);
+      uniqueVehicles.push(vehicle);
+    }
+
+    // Импортируем уникальные автомобили
+    for (const vehicle of uniqueVehicles) {
       try {
-        // Проверяем существование автомобиля
+        // Проверяем существование автомобиля в базе
         const existing = await vehicleService.findVehicle(vehicle.plate_number);
 
         if (existing) {
@@ -167,7 +182,14 @@ class ImportService {
     let report = '📊 <b>Результаты импорта</b>\n\n';
 
     report += `✅ Добавлено: <b>${importStats.added}</b>\n`;
-    report += `⚠️ Пропущено (дубликаты): <b>${importStats.skipped}</b>\n`;
+
+    if (importStats.skipped_in_file > 0) {
+      report += `⚠️ Пропущено (дубликаты в файле): <b>${importStats.skipped_in_file}</b>\n`;
+    }
+
+    if (importStats.skipped > 0) {
+      report += `⚠️ Пропущено (уже в базе): <b>${importStats.skipped}</b>\n`;
+    }
 
     const totalErrors = parseResult.errors.length + importStats.errors.length;
     report += `❌ Ошибок: <b>${totalErrors}</b>\n`;
