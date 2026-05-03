@@ -9,6 +9,9 @@ class Database {
     // Локальный кэш индекса для обхода eventual consistency
     this.indexCache = null;
     this.indexCacheTime = null;
+    // Локальный кэш статистики для обхода eventual consistency
+    this.statsCache = null;
+    this.statsCacheTime = null;
   }
 
   /**
@@ -77,6 +80,32 @@ class Database {
     // Обновляем локальный кэш
     this.indexCache = newIndex;
     this.indexCacheTime = Date.now();
+
+    // Пересчитываем статистику по ВСЕМ автомобилям из нового индекса
+    const allVehicles = [];
+    for (const plate of newIndex) {
+      const vehicleData = await store.get(`vehicle:${plate}`);
+      if (vehicleData) {
+        allVehicles.push(JSON.parse(vehicleData));
+      }
+    }
+
+    const stats = {
+      total: allVehicles.length,
+      allowed: allVehicles.filter(v => v.access_status === 'allowed').length,
+      denied: allVehicles.filter(v => v.access_status === 'denied').length,
+      permanent: allVehicles.filter(v => v.pass_type === 'permanent').length,
+      temporary: allVehicles.filter(v => v.pass_type === 'temporary').length
+    };
+
+    await store.set('vehicles:stats', JSON.stringify({
+      data: stats,
+      cached_at: new Date().toISOString()
+    }));
+
+    // Обновляем локальный кэш статистики
+    this.statsCache = stats;
+    this.statsCacheTime = Date.now();
 
     return vehicles.length;
   }
@@ -227,6 +256,9 @@ class Database {
     // Обновляем индекс
     await this._updateIndex(plateNumber, 'remove');
 
+    // Пересчитываем статистику сразу
+    await this._recalculateStats();
+
     return true;
   }
 
@@ -270,6 +302,9 @@ class Database {
       vehicle[field] = value;
       await store.set(`vehicle:${plateNumber}`, JSON.stringify(vehicle));
     }
+
+    // Инвалидируем кэш статистики
+    await this._invalidateStatsCache();
 
     // Возвращаем обновлённый объект вместо true
     return vehicle;
@@ -319,6 +354,24 @@ class Database {
     this.indexCache = [];
     this.indexCacheTime = Date.now();
 
+    // Пересчитываем статистику (будет 0 по всем полям)
+    const stats = {
+      total: 0,
+      allowed: 0,
+      denied: 0,
+      permanent: 0,
+      temporary: 0
+    };
+
+    await store.set('vehicles:stats', JSON.stringify({
+      data: stats,
+      cached_at: new Date().toISOString()
+    }));
+
+    // Обновляем локальный кэш статистики
+    this.statsCache = stats;
+    this.statsCacheTime = Date.now();
+
     return true;
   }
 
@@ -326,32 +379,31 @@ class Database {
    * Получить статистику
    */
   async getStats() {
-    const store = this._getStore();
-
-    // Используем свежий indexCache если он есть (менее 30 секунд)
-    let allPlates;
+    // Используем локальный кэш если он свежий (менее 30 секунд)
     const now = Date.now();
-    if (this.indexCache && this.indexCacheTime && (now - this.indexCacheTime) < 30000) {
-      allPlates = this.indexCache;
-    } else {
-      // Читаем из Blobs
-      const indexData = await store.get('vehicles:index');
-      allPlates = indexData ? JSON.parse(indexData) : [];
-      // Обновляем кэш
-      this.indexCache = allPlates;
-      this.indexCacheTime = now;
+    if (this.statsCache && this.statsCacheTime && (now - this.statsCacheTime) < 30000) {
+      return this.statsCache;
     }
 
-    // Загружаем автомобили по индексу
-    const vehicles = [];
-    for (const plate of allPlates) {
-      const vehicleData = await store.get(`vehicle:${plate}`);
-      if (vehicleData) {
-        vehicles.push(JSON.parse(vehicleData));
+    const store = this._getStore();
+
+    // Пробуем получить из Blobs кэша
+    const cachedStats = await store.get('vehicles:stats');
+    if (cachedStats) {
+      const stats = JSON.parse(cachedStats);
+      // Проверяем, не устарел ли кэш (5 минут)
+      const cacheAge = Date.now() - new Date(stats.cached_at).getTime();
+      if (cacheAge < 5 * 60 * 1000) {
+        // Обновляем локальный кэш
+        this.statsCache = stats.data;
+        this.statsCacheTime = now;
+        return stats.data;
       }
     }
 
     // Пересчитываем статистику
+    const vehicles = await this.getAllVehicles();
+
     const stats = {
       total: vehicles.length,
       allowed: vehicles.filter(v => v.access_status === 'allowed').length,
@@ -359,6 +411,16 @@ class Database {
       permanent: vehicles.filter(v => v.pass_type === 'permanent').length,
       temporary: vehicles.filter(v => v.pass_type === 'temporary').length
     };
+
+    // Сохраняем в Blobs кэш
+    await store.set('vehicles:stats', JSON.stringify({
+      data: stats,
+      cached_at: new Date().toISOString()
+    }));
+
+    // Обновляем локальный кэш
+    this.statsCache = stats;
+    this.statsCacheTime = now;
 
     return stats;
   }
@@ -389,6 +451,51 @@ class Database {
     // Обновляем локальный кэш
     this.indexCache = allPlates;
     this.indexCacheTime = Date.now();
+  }
+
+  /**
+   * Инвалидировать кэш статистики (приватный метод)
+   */
+  async _invalidateStatsCache() {
+    const store = this._getStore();
+    await store.delete('vehicles:stats');
+  }
+
+  /**
+   * Пересчитать и сохранить статистику (приватный метод)
+   */
+  async _recalculateStats() {
+    const store = this._getStore();
+
+    // Получаем индекс
+    const indexData = await store.get('vehicles:index');
+    const allPlates = indexData ? JSON.parse(indexData) : [];
+
+    // Загружаем все автомобили
+    const allVehicles = [];
+    for (const plate of allPlates) {
+      const vehicleData = await store.get(`vehicle:${plate}`);
+      if (vehicleData) {
+        allVehicles.push(JSON.parse(vehicleData));
+      }
+    }
+
+    const stats = {
+      total: allVehicles.length,
+      allowed: allVehicles.filter(v => v.access_status === 'allowed').length,
+      denied: allVehicles.filter(v => v.access_status === 'denied').length,
+      permanent: allVehicles.filter(v => v.pass_type === 'permanent').length,
+      temporary: allVehicles.filter(v => v.pass_type === 'temporary').length
+    };
+
+    await store.set('vehicles:stats', JSON.stringify({
+      data: stats,
+      cached_at: new Date().toISOString()
+    }));
+
+    // Обновляем локальный кэш статистики
+    this.statsCache = stats;
+    this.statsCacheTime = Date.now();
   }
 }
 
