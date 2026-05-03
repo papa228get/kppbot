@@ -1,0 +1,23 @@
+{
+  "name": "kppbot-nodejs",
+  "version": "3.0.0",
+  "description": "Telegram бот для контроля доступа автомобилей на КПП (Node.js + Netlify)",
+  "main": "netlify/functions/webhook.js",
+  "scripts": {
+    "dev": "netlify dev",
+    "deploy": "netlify deploy --prod"
+  },
+  "keywords": ["telegram", "bot", "kpp", "access-control", "netlify"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@netlify/blobs": "^7.0.0",
+    "node-fetch": "^2.7.0"
+  },
+  "devDependencies": {
+    "netlify-cli": "^17.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
