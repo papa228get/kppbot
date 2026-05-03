@@ -65,9 +65,9 @@ class StateManager {
     // Обновляем кэш сразу после записи
     this.cache.set(userId, stateData);
 
-    // Небольшая задержка для eventual consistency
-    // Даем Blobs время на репликацию данных
-    await new Promise(resolve => setTimeout(resolve, 100));
+    // Увеличенная задержка для eventual consistency
+    // Даем Blobs больше времени на репликацию данных
+    await new Promise(resolve => setTimeout(resolve, 200));
 
     // Очищаем старые состояния
     await this._cleanOldStates();
