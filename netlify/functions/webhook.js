@@ -133,6 +133,10 @@ exports.handler = async (event, context) => {
             await commandHandler.handleImport(chatId, userId, isAdmin);
             break;
 
+          case '/fulldel':
+            await commandHandler.handleFullDelete(chatId, isAdmin);
+            break;
+
           default:
             await telegram.send(chatId, '❓ Неизвестная команда. Используйте /help для справки.');
             break;

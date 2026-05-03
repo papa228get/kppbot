@@ -142,6 +142,40 @@ class CommandHandler {
     const keyboard = KeyboardBuilder.buildNavigationButtons(false);
     await this.telegram.send(chatId, instructions, keyboard);
   }
+
+  /**
+   * Обработать команду /fulldel - полная очистка базы данных
+   */
+  async handleFullDelete(chatId, isAdmin) {
+    if (!isAdmin) {
+      await this.telegram.send(chatId, '❌ У вас нет прав для выполнения этой команды');
+      return;
+    }
+
+    try {
+      // Получаем все автомобили
+      const allVehicles = await this.vehicleService.getAllVehicles();
+
+      if (allVehicles.length === 0) {
+        await this.telegram.send(chatId, '📋 База данных уже пуста');
+        return;
+      }
+
+      // Удаляем все автомобили
+      let deleted = 0;
+      for (const vehicle of allVehicles) {
+        const result = await this.vehicleService.removeVehicle(vehicle.plate_number);
+        if (result) {
+          deleted++;
+        }
+      }
+
+      await this.telegram.send(chatId, `🗑️ <b>База данных очищена</b>\n\n✅ Удалено автомобилей: <b>${deleted}</b>`);
+    } catch (error) {
+      console.error('Error in handleFullDelete:', error);
+      await this.telegram.send(chatId, '❌ Ошибка при очистке базы данных');
+    }
+  }
 }
 
 module.exports = CommandHandler;
