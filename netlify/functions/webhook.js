@@ -1,4 +1,4 @@
-const getStoreWrapper = require('../../src/core/mockBlobStore');
+const { getStore } = require('@netlify/blobs');
 const Database = require('../../src/core/database');
 const StateManager = require('../../src/core/stateManager');
 const TelegramApi = require('../../src/services/telegramApi');
@@ -30,8 +30,8 @@ exports.handler = async (event, context) => {
     console.log('Received update:', JSON.stringify(update, null, 2));
 
     // Инициализация зависимостей
-    const db = new Database(getStoreWrapper);
-    const stateManager = new StateManager(getStoreWrapper);
+    const db = new Database(getStore);
+    const stateManager = new StateManager(getStore);
     const telegram = new TelegramApi(process.env.BOT_TOKEN);
     const vehicleService = new VehicleService(db);
     const accessChecker = new AccessChecker(db);
