@@ -96,14 +96,17 @@ class ListFormatter {
       navRow.push({ text: '➡️', callback_data: `list_page:${page + 1}` });
     }
 
-    // Кнопка поиска
-    const searchButton = [{ text: '🔍 Поиск', callback_data: 'list_search' }];
+    // Кнопки поиска и возврата
+    const actionButtons = [
+      { text: '🔍 Поиск', callback_data: 'list_search' },
+      { text: '⬅️ Назад', callback_data: 'menu_back' }
+    ];
 
     const keyboard = {
       inline_keyboard: [
         ...vehicleButtons,
         ...(navRow.length > 1 ? [navRow] : []), // Показываем только если есть навигация
-        searchButton
+        actionButtons
       ]
     };
 
