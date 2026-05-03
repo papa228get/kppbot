@@ -12,7 +12,7 @@ class StateManager {
    * Получить store для работы с Blobs
    */
   _getStore() {
-    return this.getStore({ name: this.storeName, consistency: 'strong' });
+    return this.getStore({ name: this.storeName, consistency: 'eventual' });
   }
 
   /**
