@@ -16,7 +16,12 @@ class StatsFormatter {
 
     text += '<b>По типу пропуска:</b>\n';
     text += `🔄 Постоянный: ${stats.permanent}\n`;
-    text += `⏳ Временный: ${stats.temporary}\n`;
+    text += `⏳ Временный: ${stats.temporary}\n\n`;
+
+    // Добавляем время обновления для обхода кэша Telegram
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    text += `<i>Обновлено: ${timeStr}</i>`;
 
     return text;
   }
