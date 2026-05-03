@@ -1,4 +1,4 @@
-const { getStore } = require('@netlify/blobs');
+const { getStore, connectLambda } = require('@netlify/blobs');
 const Database = require('../../src/core/database');
 const StateManager = require('../../src/core/stateManager');
 const TelegramApi = require('../../src/services/telegramApi');
@@ -25,29 +25,18 @@ exports.handler = async (event, context) => {
   }
 
   try {
+    // Инициализация Netlify Blobs для Lambda compatibility mode
+    connectLambda(event);
+
     // Парсинг update от Telegram
     const update = JSON.parse(event.body);
     console.log('Received update:', JSON.stringify(update, null, 2));
 
     // Инициализация зависимостей
     console.log('Initializing database...');
-    console.log('Environment check:', {
-      hasSiteId: !!process.env.SITE_ID,
-      hasContext: !!context,
-      contextKeys: context ? Object.keys(context) : []
-    });
-
-    // Используем встроенные переменные Netlify
-    const getStoreWithConfig = (options) => {
-      return getStore({
-        ...options,
-        siteID: process.env.SITE_ID,
-        // Netlify автоматически предоставляет токен в production
-      });
-    };
-    const db = new Database(getStoreWithConfig);
+    const db = new Database(getStore);
     console.log('Initializing state manager...');
-    const stateManager = new StateManager(getStoreWithConfig);
+    const stateManager = new StateManager(getStore);
     const telegram = new TelegramApi(process.env.BOT_TOKEN);
     const vehicleService = new VehicleService(db);
     const accessChecker = new AccessChecker(db);
