@@ -68,19 +68,6 @@ class VehicleService {
     const normalizedPlate = PlateValidator.normalize(plateNumber);
     return await this.db.updateVehicle(normalizedPlate, field, value);
   }
-
-  async updateVehiclePlate(oldPlate, newPlate) {
-    const normalizedOldPlate = PlateValidator.normalize(oldPlate);
-    const normalizedNewPlate = PlateValidator.normalize(newPlate);
-
-    // Проверяем, не существует ли уже автомобиль с новым номером
-    const existing = await this.db.findVehicle(normalizedNewPlate);
-    if (existing) {
-      return false;
-    }
-
-    return await this.db.updateVehicle(normalizedOldPlate, 'plate_number', normalizedNewPlate);
-  }
 }
 
 module.exports = VehicleService;

@@ -282,7 +282,8 @@ class Database {
     // Инвалидируем кэш статистики
     await this._invalidateStatsCache();
 
-    return true;
+    // Возвращаем обновлённый объект вместо true
+    return vehicle;
   }
 
   /**

@@ -200,9 +200,9 @@ class CallbackHandler {
 
       if (vehicle) {
         const newStatus = vehicle.access_status === 'allowed' ? 'denied' : 'allowed';
-        await this.vehicleService.updateVehicleStatus(plateNumber, newStatus);
+        const updatedVehicle = await this.vehicleService.updateVehicleStatus(plateNumber, newStatus);
 
-        const updatedVehicle = await this.vehicleService.findVehicle(plateNumber);
+        // updateVehicleStatus теперь возвращает обновлённый объект
         const VehicleFormatter = require('../formatters/vehicleFormatter');
         const PlateValidator = require('../validators/plateValidator');
         const isAdmin = PlateValidator.isAdmin(userId);
@@ -244,12 +244,9 @@ class CallbackHandler {
       const plateNumber = data.split(':')[1];
       await this.vehicleService.removeVehicle(plateNumber);
 
-      // Инвалидируем кэш статистики
-      await this.vehicleService.db._invalidateStatsCache();
-
       await this.telegram.answerCallback(callbackQuery.id, '✅ Автомобиль удален', false);
 
-      // Возвращаемся к обновленному списку
+      // Возвращаемся к обновленному списку (принудительно пересчитываем)
       const VehicleFormatter = require('../formatters/vehicleFormatter');
       const paginationData = await this.vehicleService.getVehiclesList(1, 5);
       const listData = VehicleFormatter.formatInteractiveList(paginationData);
@@ -378,10 +375,9 @@ class CallbackHandler {
 
       if (newType === 'permanent') {
         // Для постоянного пропуска сразу обновляем
-        await this.vehicleService.updateVehicle(plateNumber, 'pass_type', 'permanent');
-        await this.vehicleService.updateVehicle(plateNumber, 'expiry_date', null);
+        let updatedVehicle = await this.vehicleService.updateVehicle(plateNumber, 'pass_type', 'permanent');
+        updatedVehicle = await this.vehicleService.updateVehicle(plateNumber, 'expiry_date', null);
 
-        const updatedVehicle = await this.vehicleService.findVehicle(plateNumber);
         const CardFormatter = require('../formatters/vehicle/cardFormatter');
         const cardData = CardFormatter.formatCard(updatedVehicle, 'list_back', true);
 

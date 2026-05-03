@@ -187,11 +187,10 @@ class StateHandler {
       const newBrand = text === '-' ? '' : text.trim();
       const plateNumber = userState.data.plate_number;
 
-      const result = await this.vehicleService.updateVehicle(plateNumber, 'brand', newBrand);
+      const updatedVehicle = await this.vehicleService.updateVehicle(plateNumber, 'brand', newBrand);
 
-      if (result) {
-        // Получаем обновленные данные
-        const updatedVehicle = await this.vehicleService.findVehicle(plateNumber);
+      if (updatedVehicle) {
+        // updateVehicle теперь возвращает обновлённый объект
         const CardFormatter = require('../formatters/vehicle/cardFormatter');
         const cardData = CardFormatter.formatCard(updatedVehicle, 'list_back', true);
 
@@ -221,12 +220,11 @@ class StateHandler {
       const plateNumber = userState.data.plate_number;
       const newType = userState.data.new_type;
 
-      // Обновляем тип пропуска и дату
-      await this.vehicleService.updateVehicle(plateNumber, 'pass_type', newType);
-      await this.vehicleService.updateVehicle(plateNumber, 'expiry_date', expiryDate);
+      // Обновляем тип пропуска
+      let updatedVehicle = await this.vehicleService.updateVehicle(plateNumber, 'pass_type', newType);
+      // Обновляем дату
+      updatedVehicle = await this.vehicleService.updateVehicle(plateNumber, 'expiry_date', expiryDate);
 
-      // Получаем обновленные данные
-      const updatedVehicle = await this.vehicleService.findVehicle(plateNumber);
       const CardFormatter = require('../formatters/vehicle/cardFormatter');
       const cardData = CardFormatter.formatCard(updatedVehicle, 'list_back', true);
 
@@ -246,11 +244,10 @@ class StateHandler {
       const newNotes = text === '-' ? '' : text.trim();
       const plateNumber = userState.data.plate_number;
 
-      const result = await this.vehicleService.updateVehicle(plateNumber, 'notes', newNotes);
+      const updatedVehicle = await this.vehicleService.updateVehicle(plateNumber, 'notes', newNotes);
 
-      if (result) {
-        // Получаем обновленные данные
-        const updatedVehicle = await this.vehicleService.findVehicle(plateNumber);
+      if (updatedVehicle) {
+        // updateVehicle теперь возвращает обновлённый объект
         const CardFormatter = require('../formatters/vehicle/cardFormatter');
         const cardData = CardFormatter.formatCard(updatedVehicle, 'list_back', true);
 
