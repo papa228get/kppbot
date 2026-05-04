@@ -87,8 +87,18 @@ class AddOnelineStateHandler {
           const cardData = VehicleFormatter.formatCard(vehicle, 'menu_back', true);
           await this.telegram.send(chatId, '✅ <b>Автомобиль успешно добавлен!</b>\n\n' + cardData.text, cardData.keyboard);
         } else {
-          // Если не нашли - просто сообщаем об успехе без карточки
-          await this.telegram.send(chatId, `✅ <b>Автомобиль успешно добавлен!</b>\n\n🚗 ${plateNumber}\n🏷 ${brand}\n📋 ${passType === 'permanent' ? 'Постоянный' : 'Временный'}`);
+          // Если не нашли - создаем объект вручную и показываем карточку
+          const manualVehicle = {
+            plate_number: plateNumber,
+            brand: brand,
+            access_status: 'allowed',
+            pass_type: passType,
+            expiry_date: expiryDate,
+            notes: '',
+            created_at: new Date().toISOString()
+          };
+          const cardData = VehicleFormatter.formatCard(manualVehicle, 'menu_back', true);
+          await this.telegram.send(chatId, '✅ <b>Автомобиль успешно добавлен!</b>\n\n' + cardData.text, cardData.keyboard);
         }
       } else {
         await this.telegram.send(chatId, '❌ Автомобиль с таким номером уже существует');
