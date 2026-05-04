@@ -81,14 +81,11 @@ class AddOnelineStateHandler {
         // Задержка для eventual consistency перед чтением
         await new Promise(resolve => setTimeout(resolve, 1000));
 
-        const vehicle = await this.vehicleService.findVehicle(plateNumber);
+        let vehicle = await this.vehicleService.findVehicle(plateNumber);
 
-        if (vehicle) {
-          const cardData = VehicleFormatter.formatCard(vehicle, 'menu_back', true);
-          await this.telegram.send(chatId, '✅ <b>Автомобиль успешно добавлен!</b>\n\n' + cardData.text, cardData.keyboard);
-        } else {
-          // Если не нашли - создаем объект вручную и показываем карточку
-          const manualVehicle = {
+        if (!vehicle) {
+          // Если не нашли - создаем объект вручную
+          vehicle = {
             plate_number: plateNumber,
             brand: brand,
             access_status: 'allowed',
@@ -97,9 +94,10 @@ class AddOnelineStateHandler {
             notes: '',
             created_at: new Date().toISOString()
           };
-          const cardData = VehicleFormatter.formatCard(manualVehicle, 'menu_back', true);
-          await this.telegram.send(chatId, '✅ <b>Автомобиль успешно добавлен!</b>\n\n' + cardData.text, cardData.keyboard);
         }
+
+        const cardData = VehicleFormatter.formatCard(vehicle, 'menu_back', true);
+        await this.telegram.send(chatId, '✅ <b>Автомобиль успешно добавлен!</b>\n\n' + cardData.text, cardData.keyboard);
       } else {
         await this.telegram.send(chatId, '❌ Автомобиль с таким номером уже существует');
       }
