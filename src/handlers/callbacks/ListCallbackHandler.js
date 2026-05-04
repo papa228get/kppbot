@@ -16,7 +16,7 @@ class ListCallbackHandler {
    * Проверить, может ли этот обработчик обработать callback
    */
   canHandle(data) {
-    return data.startsWith('list_') || data.startsWith('view_vehicle:');
+    return data.startsWith('list_') || data.startsWith('view_vehicle:') || data.startsWith('search_select:');
   }
 
   /**
@@ -30,6 +30,8 @@ class ListCallbackHandler {
 
     if (data.startsWith('view_vehicle:')) {
       await this.handleViewVehicle(data, chatId, messageId, userId);
+    } else if (data.startsWith('search_select:')) {
+      await this.handleSearchSelect(data, chatId, messageId, userId);
     } else if (data.startsWith('list_page:')) {
       await this.handleListPage(data, chatId, messageId);
     } else if (data === 'list_back') {
@@ -47,6 +49,21 @@ class ListCallbackHandler {
    * Обработать view_vehicle - показать карточку автомобиля
    */
   async handleViewVehicle(data, chatId, messageId, userId) {
+    const plateNumber = data.split(':')[1];
+    const vehicle = await this.vehicleService.findVehicle(plateNumber);
+
+    if (vehicle) {
+      const PlateValidator = require('../../validators/plateValidator');
+      const isAdmin = PlateValidator.isAdmin(userId);
+      const cardData = VehicleFormatter.formatCard(vehicle, 'list_back', isAdmin);
+      await this.telegram.edit(chatId, messageId, cardData.text, cardData.keyboard);
+    }
+  }
+
+  /**
+   * Обработать search_select - выбор автомобиля из результатов поиска
+   */
+  async handleSearchSelect(data, chatId, messageId, userId) {
     const plateNumber = data.split(':')[1];
     const vehicle = await this.vehicleService.findVehicle(plateNumber);
 
