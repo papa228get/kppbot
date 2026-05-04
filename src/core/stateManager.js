@@ -2,12 +2,16 @@
  * StateManager класс для управления состояниями пользователей
  * Использует Netlify Blobs вместо JSON файла
  */
+
+// Глобальный кэш состояний, сохраняется между Lambda запросами
+const globalStateCache = new Map();
+
 class StateManager {
   constructor(getStore) {
     this.getStore = getStore;
     this.storeName = 'kppbot';
-    // In-memory кэш для решения проблемы eventual consistency
-    this.cache = new Map();
+    // Используем глобальный кэш вместо локального
+    this.cache = globalStateCache;
   }
 
   /**
