@@ -18,7 +18,7 @@ class VehicleRepository {
   }
 
   /**
-   * Добавить автомобиль (без проверки на дубликаты, без обновления индекса)
+   * Добавить автомобиль (обновляет индекс и инвалидирует кэш статистики)
    */
   async addVehicle(plateNumber, brand, accessStatus, passType, expiryDate, notes) {
     const store = this._getStore();
@@ -33,8 +33,16 @@ class VehicleRepository {
       created_at: new Date().toISOString()
     };
 
+    // Сохраняем автомобиль
     await store.set(`vehicle:${plateNumber}`, JSON.stringify(vehicle));
-    return true;
+
+    // Обновляем индекс
+    await this.indexManager.addToIndex(plateNumber);
+
+    // Инвалидируем кэш статистики
+    await this.statsCalculator.invalidateStatsCache();
+
+    return vehicle; // Возвращаем объект вместо true
   }
 
   /**

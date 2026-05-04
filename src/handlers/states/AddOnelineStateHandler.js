@@ -77,33 +77,46 @@ class AddOnelineStateHandler {
         ''
       );
 
-      if (result) {
-        // Задержка для eventual consistency перед чтением
-        await new Promise(resolve => setTimeout(resolve, 1000));
-
-        let vehicle = await this.vehicleService.findVehicle(plateNumber);
-
-        if (!vehicle) {
-          // Если не нашли - создаем объект вручную
-          vehicle = {
-            plate_number: plateNumber,
-            brand: brand,
-            access_status: 'allowed',
-            pass_type: passType,
-            expiry_date: expiryDate,
-            notes: '',
-            created_at: new Date().toISOString()
-          };
-        }
-
+      if (result.success) {
+        // Успешно добавлено - показываем карточку
+        const vehicle = result.vehicle;
         const cardData = VehicleFormatter.formatCard(vehicle, 'menu_back', true);
-        await this.telegram.send(chatId, '✅ <b>Автомобиль успешно добавлен!</b>\n\n' + cardData.text, cardData.keyboard);
+        await this.telegram.send(
+          chatId,
+          '✅ <b>Автомобиль успешно добавлен!</b>\n\n' + cardData.text,
+          cardData.keyboard
+        );
+      } else if (result.error === 'duplicate') {
+        // Дубликат - показываем ошибку с кнопкой "Главное меню"
+        const PlateValidator = require('../../validators/plateValidator');
+        const isAdmin = PlateValidator.isAdmin(userId);
+        const keyboard = KeyboardBuilder.buildMainMenu(isAdmin);
+        await this.telegram.send(
+          chatId,
+          '❌ <b>Ошибка добавления</b>\n\nАвтомобиль с таким номером уже существует в базе данных.',
+          keyboard
+        );
       } else {
-        await this.telegram.send(chatId, '❌ Автомобиль с таким номером уже существует');
+        // Другая ошибка - показываем с кнопкой "Главное меню"
+        const PlateValidator = require('../../validators/plateValidator');
+        const isAdmin = PlateValidator.isAdmin(userId);
+        const keyboard = KeyboardBuilder.buildMainMenu(isAdmin);
+        await this.telegram.send(
+          chatId,
+          '❌ <b>Ошибка добавления</b>\n\nПроизошла ошибка при добавлении автомобиля. Попробуйте еще раз.',
+          keyboard
+        );
       }
     } catch (error) {
       console.error('Error in AddOnelineStateHandler:', error);
-      await this.telegram.send(chatId, '❌ Ошибка при добавлении автомобиля');
+      const PlateValidator = require('../../validators/plateValidator');
+      const isAdmin = PlateValidator.isAdmin(userId);
+      const keyboard = KeyboardBuilder.buildMainMenu(isAdmin);
+      await this.telegram.send(
+        chatId,
+        '❌ <b>Ошибка добавления</b>\n\nПроизошла техническая ошибка. Попробуйте позже.',
+        keyboard
+      );
     }
 
     // Очищаем состояние

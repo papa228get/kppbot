@@ -44,15 +44,19 @@ class Database {
 
   /**
    * Добавить автомобиль с проверкой на дубликаты
+   * Возвращает { success, error, vehicle }
    */
   async addVehicleWithCheck(plateNumber, brand, accessStatus, passType, expiryDate, notes) {
     // Проверяем существование
     const existing = await this.findVehicle(plateNumber);
     if (existing) {
-      return false;
+      return { success: false, error: 'duplicate', vehicle: null };
     }
 
-    return await this.addVehicle(plateNumber, brand, accessStatus, passType, expiryDate, notes);
+    // Добавляем автомобиль (теперь возвращает объект)
+    const vehicle = await this.addVehicle(plateNumber, brand, accessStatus, passType, expiryDate, notes);
+
+    return { success: true, error: null, vehicle: vehicle };
   }
 
   /**
