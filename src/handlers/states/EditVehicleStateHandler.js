@@ -62,7 +62,7 @@ class EditVehicleStateHandler {
 
     const result = await this.vehicleService.updateVehicle(oldPlate, 'plate_number', newPlate);
 
-    if (result) {
+    if (result && typeof result === 'object') {
       // Получаем обновленные данные и отправляем карточку
       const updatedVehicle = await this.vehicleService.findVehicle(newPlate);
       const cardData = CardFormatter.formatCard(updatedVehicle, 'list_back', true);
@@ -90,7 +90,7 @@ class EditVehicleStateHandler {
 
     const updatedVehicle = await this.vehicleService.updateVehicle(plateNumber, 'brand', newBrand);
 
-    if (updatedVehicle) {
+    if (updatedVehicle && typeof updatedVehicle === 'object') {
       const cardData = CardFormatter.formatCard(updatedVehicle, 'list_back', true);
 
       const brandText = newBrand || 'не указана';
@@ -146,7 +146,7 @@ class EditVehicleStateHandler {
 
     const updatedVehicle = await this.vehicleService.updateVehicle(plateNumber, 'notes', newNotes);
 
-    if (updatedVehicle) {
+    if (updatedVehicle && typeof updatedVehicle === 'object') {
       const cardData = CardFormatter.formatCard(updatedVehicle, 'list_back', true);
 
       const notesText = newNotes || 'не указаны';
