@@ -63,9 +63,8 @@ class EditVehicleStateHandler {
     const result = await this.vehicleService.updateVehicle(oldPlate, 'plate_number', newPlate);
 
     if (result && typeof result === 'object') {
-      // Получаем обновленные данные и отправляем карточку
-      const updatedVehicle = await this.vehicleService.findVehicle(newPlate);
-      const cardData = CardFormatter.formatCard(updatedVehicle, 'list_back', true);
+      // Используем уже полученный объект вместо повторного чтения из БД
+      const cardData = CardFormatter.formatCard(result, 'list_back', true);
 
       let successText = '✅ <b>Гос-номер изменен</b>\n\n';
       successText += `Старый номер: <b>${oldPlate}</b>\n`;
