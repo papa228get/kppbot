@@ -30,7 +30,7 @@ class AddOnelineStateHandler {
     const parts = text.split(/\s+/).filter(p => p.length > 0);
 
     if (parts.length < 3) {
-      await this.telegram.send(chatId, '❌ Недостаточно данных\n\nФормат: <code>Марка Номер Тип [Дата]</code>\n\nПример: <code>Лада А123БВ Постоянный</code>');
+      await this.telegram.send(chatId, '❌ Недостаточно данных\n\nФормат: <code>Марка Номер Тип [Дата] [Комментарий]</code>\n\nПример: <code>Лада А123БВ Постоянный Директор</code>');
       return;
     }
 
@@ -38,7 +38,6 @@ class AddOnelineStateHandler {
     const brand = parts[0];
     const plateNumber = parts[1];
     const passTypeRaw = parts[2];
-    const expiryDateRaw = parts[3] || null;
 
     // Определяем тип пропуска
     let passType = 'permanent';
@@ -46,15 +45,18 @@ class AddOnelineStateHandler {
       passType = 'temporary';
     }
 
-    // Парсим дату для временных
+    // Парсим дату и комментарий
     let expiryDate = null;
+    let notes = '';
+
     if (passType === 'temporary') {
-      if (!expiryDateRaw) {
+      // Для временного пропуска ищем дату в формате ДД.ММ.ГГГГ
+      if (parts.length < 4) {
         await this.telegram.send(chatId, '❌ Для временного пропуска укажите дату окончания\n\nПример: <code>КИА В456ГД Временный 31.12.2026</code>');
         return;
       }
 
-      const dateMatch = expiryDateRaw.match(/^(\d{2})\.(\d{2})\.(\d{4})$/);
+      const dateMatch = parts[3].match(/^(\d{2})\.(\d{2})\.(\d{4})$/);
       if (!dateMatch) {
         await this.telegram.send(chatId, '❌ Некорректный формат даты. Используйте ДД.ММ.ГГГГ\n\nПример: 31.12.2026');
         return;
@@ -64,6 +66,16 @@ class AddOnelineStateHandler {
       const month = dateMatch[2];
       const year = dateMatch[3];
       expiryDate = `${year}-${month}-${day}`;
+
+      // Все что после даты (с индекса 4) - это комментарий
+      if (parts.length > 4) {
+        notes = parts.slice(4).join(' ');
+      }
+    } else {
+      // Для постоянного пропуска все что после типа (с индекса 3) - это комментарий
+      if (parts.length > 3) {
+        notes = parts.slice(3).join(' ');
+      }
     }
 
     // Добавляем автомобиль
@@ -74,7 +86,7 @@ class AddOnelineStateHandler {
         'allowed',
         passType,
         expiryDate,
-        ''
+        notes
       );
 
       if (result.success) {

@@ -49,7 +49,17 @@ class ListFormatter {
         text += ` - ${vehicle.brand}`;
       }
 
-      text += ` ${passIcon}\n`;
+      text += ` ${passIcon}`;
+
+      // Добавляем краткий комментарий если есть
+      if (vehicle.notes) {
+        const shortNotes = vehicle.notes.length > 20
+          ? vehicle.notes.substring(0, 20) + '...'
+          : vehicle.notes;
+        text += ` 📝 ${shortNotes}`;
+      }
+
+      text += `\n`;
     });
 
     return text;
@@ -78,8 +88,24 @@ class ListFormatter {
     // Создаем кнопки для каждого авто (по одной в ряд)
     const vehicleButtons = vehicles.map(vehicle => {
       const icon = this.getStatusIcon(vehicle);
+      const passIcon = vehicle.pass_type === 'permanent' ? '🔄' : '⏳';
+
+      let buttonText = `${icon} ${vehicle.plate_number}`;
+      if (vehicle.brand) {
+        buttonText += ` ${vehicle.brand}`;
+      }
+      buttonText += ` ${passIcon}`;
+
+      // Добавляем краткий комментарий в текст кнопки
+      if (vehicle.notes) {
+        const shortNotes = vehicle.notes.length > 15
+          ? vehicle.notes.substring(0, 15) + '...'
+          : vehicle.notes;
+        buttonText += ` 📝 ${shortNotes}`;
+      }
+
       return [{
-        text: `${icon} ${vehicle.plate_number}`,
+        text: buttonText,
         callback_data: `view_vehicle:${vehicle.plate_number}`
       }];
     });
@@ -149,8 +175,24 @@ class ListFormatter {
     // Создаем кнопки для каждого авто (по одной в ряд)
     const vehicleButtons = vehicles.map(vehicle => {
       const icon = this.getStatusIcon(vehicle);
+      const passIcon = vehicle.pass_type === 'permanent' ? '🔄' : '⏳';
+
+      let buttonText = `${icon} ${vehicle.plate_number}`;
+      if (vehicle.brand) {
+        buttonText += ` ${vehicle.brand}`;
+      }
+      buttonText += ` ${passIcon}`;
+
+      // Добавляем краткий комментарий в текст кнопки
+      if (vehicle.notes) {
+        const shortNotes = vehicle.notes.length > 15
+          ? vehicle.notes.substring(0, 15) + '...'
+          : vehicle.notes;
+        buttonText += ` 📝 ${shortNotes}`;
+      }
+
       return [{
-        text: `${icon} ${vehicle.plate_number}`,
+        text: buttonText,
         callback_data: `view_vehicle:${vehicle.plate_number}`
       }];
     });

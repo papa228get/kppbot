@@ -29,7 +29,17 @@ class SearchFormatter {
         text += ` - ${vehicle.brand}`;
       }
 
-      text += ` ${passIcon}\n`;
+      text += ` ${passIcon}`;
+
+      // Добавляем краткий комментарий если есть
+      if (vehicle.notes) {
+        const shortNotes = vehicle.notes.length > 30
+          ? vehicle.notes.substring(0, 30) + '...'
+          : vehicle.notes;
+        text += ` 📝 ${shortNotes}`;
+      }
+
+      text += `\n`;
     });
 
     // Формируем кнопки для каждого автомобиля
