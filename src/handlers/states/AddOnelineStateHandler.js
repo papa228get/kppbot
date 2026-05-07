@@ -3,7 +3,7 @@ const VehicleFormatter = require('../../formatters/vehicleFormatter');
 
 /**
  * AddOnelineStateHandler - обработка добавления автомобиля одной строкой
- * Формат: Номер Марка Тип [Дата]
+ * Формат: Марка Номер Тип [Дата]
  */
 class AddOnelineStateHandler {
   constructor(telegram, vehicleService, stateManager) {
@@ -30,13 +30,13 @@ class AddOnelineStateHandler {
     const parts = text.split(/\s+/).filter(p => p.length > 0);
 
     if (parts.length < 3) {
-      await this.telegram.send(chatId, '❌ Недостаточно данных\n\nФормат: <code>Номер Марка Тип [Дата]</code>\n\nПример: <code>А123БВ Лада Постоянный</code>');
+      await this.telegram.send(chatId, '❌ Недостаточно данных\n\nФормат: <code>Марка Номер Тип [Дата]</code>\n\nПример: <code>Лада А123БВ Постоянный</code>');
       return;
     }
 
     // Парсим данные
-    const plateNumber = parts[0];
-    const brand = parts[1];
+    const brand = parts[0];
+    const plateNumber = parts[1];
     const passTypeRaw = parts[2];
     const expiryDateRaw = parts[3] || null;
 
@@ -50,7 +50,7 @@ class AddOnelineStateHandler {
     let expiryDate = null;
     if (passType === 'temporary') {
       if (!expiryDateRaw) {
-        await this.telegram.send(chatId, '❌ Для временного пропуска укажите дату окончания\n\nПример: <code>В456ГД КИА Временный 31.12.2026</code>');
+        await this.telegram.send(chatId, '❌ Для временного пропуска укажите дату окончания\n\nПример: <code>КИА В456ГД Временный 31.12.2026</code>');
         return;
       }
 
