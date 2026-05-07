@@ -109,17 +109,31 @@ class CardFormatter {
         { text: '⚙️ Настройки', callback_data: `edit_vehicle:${vehicle.plate_number}` }
       ]);
 
-      // Третья строка: Назад и Главное меню
-      buttons.push([
-        { text: '⬅️ К списку', callback_data: backAction },
-        { text: '🏠 Главное меню', callback_data: 'menu_back' }
-      ]);
+      // Третья строка: Назад (к списку или главному меню)
+      if (backAction === 'menu_back') {
+        // Если возврат в главное меню - показываем только одну кнопку
+        buttons.push([
+          { text: '🏠 Главное меню', callback_data: 'menu_back' }
+        ]);
+      } else {
+        // Если возврат к списку - показываем обе кнопки
+        buttons.push([
+          { text: '⬅️ К списку', callback_data: backAction },
+          { text: '🏠 Главное меню', callback_data: 'menu_back' }
+        ]);
+      }
     } else {
       // Для обычных пользователей: только навигация
-      buttons.push([
-        { text: '⬅️ К списку', callback_data: backAction },
-        { text: '🏠 Главное меню', callback_data: 'menu_back' }
-      ]);
+      if (backAction === 'menu_back') {
+        buttons.push([
+          { text: '🏠 Главное меню', callback_data: 'menu_back' }
+        ]);
+      } else {
+        buttons.push([
+          { text: '⬅️ К списку', callback_data: backAction },
+          { text: '🏠 Главное меню', callback_data: 'menu_back' }
+        ]);
+      }
     }
 
     const keyboard = {
